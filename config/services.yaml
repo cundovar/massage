@@ -1,0 +1,17 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+parameters:
+    app.images_directory: '%kernel.project_dir%/public/images'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+
+    App\Service\MediaUploader:
+        arguments:
+            $imagesDirectory: '%app.images_directory%'
