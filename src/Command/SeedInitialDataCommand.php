@@ -93,10 +93,12 @@ final class SeedInitialDataCommand extends Command
             'presentation' => [
                 'title' => 'Presentation',
                 'content' => [
+                    'title' => 'Presentation',
                     'paragraphs' => [
                         'Bienvenue, je suis Helene.',
                         'Chaque seance est personnalisee selon vos besoins.',
                     ],
+                    'quote' => "Je m'adresse a tous ceux qui souhaitent prendre soin d'eux-memes et s'offrir une pause bienveillante.",
                 ],
             ],
             'approche' => [
@@ -109,6 +111,7 @@ final class SeedInitialDataCommand extends Command
                         'Une ecoute precise du corps.',
                         'Une parenthese bienveillante.',
                     ],
+                    'quote' => 'Chaque soin est pense comme une pause pour vous recentrer et vous alleger.',
                 ],
             ],
         ]);
@@ -127,7 +130,47 @@ final class SeedInitialDataCommand extends Command
                     'paragraphs' => ['Chaque soin est pense comme un moment unique.'],
                 ],
             ],
+            'tarifs' => [
+                'title' => 'Carte & tarifs',
+                'content' => [
+                    'title' => 'Carte & tarifs',
+                    'subtitle' => 'Une selection de soins ayurvediques, reflexologie plantaire, Kobido et massage prenatal.',
+                    'offers' => [
+                        [
+                            'title' => 'Ayurveda',
+                            'description' => "Les massages ayurvediques apaisent le corps et l'esprit, redonnent de l'ancrage et relancent la flamme interieure.",
+                            'prices' => ['Abhyanga · 1h · 80 EUR', 'Abhyanga · 1h30 · 100 EUR'],
+                        ],
+                        [
+                            'title' => 'Bol Kansu',
+                            'description' => "Le bol aux trois alliages est frotte contre la plante des pieds pour apaiser les esprits agites et reequilibrer l'element feu.",
+                            'prices' => ['Massage des pieds · 1h · 60 EUR'],
+                        ],
+                        [
+                            'title' => 'Padhabyanga',
+                            'description' => "Massage des jambes complete d'une reflexologie plantaire ou d'un bol Kansu pour delier les tensions.",
+                            'prices' => ['1h · 70 EUR'],
+                        ],
+                        [
+                            'title' => 'Massage prenatal',
+                            'description' => 'Un accompagnement en douceur pendant la grossesse. Le soin est adapte a chaque etape selon vos besoins.',
+                            'prices' => ["Tarif communique lors de l'entretien prealable."],
+                        ],
+                        [
+                            'title' => 'Reflexologie plantaire',
+                            'description' => 'En regulant les differents systemes du corps par le pied, cette pratique aide a reequilibrer le moment.',
+                            'prices' => ['Seance decouverte · 45 min · 50 EUR'],
+                        ],
+                        [
+                            'title' => 'Kobido',
+                            'description' => 'Massage du visage de tradition japonaise. Il fait circuler la lymphe et redonne du tonus pour un visage lumineux.',
+                            'prices' => ['Seance decouverte · 70 EUR'],
+                        ],
+                    ],
+                ],
+            ],
         ]);
+        $this->ensureSoinsSections();
 
         $this->createPageIfMissing('about', 'A propos', 'A propos - Helene', 'Parcours et philosophie d Helene.', [
             'hero' => [
@@ -157,6 +200,32 @@ final class SeedInitialDataCommand extends Command
                 ],
             ],
         ]);
+
+        $this->createPageIfMissing('entreprise', 'Entreprise', 'Massage Amma en entreprise - Helene', 'Offre de massage Amma assis pour les entreprises.', [
+            'entreprise' => [
+                'title' => 'Massage Amma en entreprise',
+                'content' => [
+                    'title' => 'Massage Amma en entreprise',
+                    'subtitle' => 'Massage Amma assis : rapide, efficace, sans huile, sur chaise ergonomique.',
+                    'teamTitle' => 'Pour vos equipes',
+                    'teamBenefits' => [
+                        'Moins de stress',
+                        "Plus d'energie et de concentration",
+                        'Moins de tensions musculaires',
+                        'Plus de motivation',
+                    ],
+                    'companyTitle' => 'Pour votre entreprise',
+                    'companyBenefits' => [
+                        'Qualite de Vie au Travail renforcee',
+                        'Collaborateurs plus performants et engages',
+                        'Image positive et responsable',
+                    ],
+                    'characteristics' => ['10-20 min', 'Dans vos locaux', 'Sans huile', 'Chaise ergo'],
+                    'quote' => 'Le massage Amma assis : un investissement simple et rentable pour le bien-etre collectif.',
+                ],
+            ],
+        ]);
+        $this->ensureEntrepriseSections();
     }
 
     private function ensureHomeSections(): void
@@ -177,10 +246,12 @@ final class SeedInitialDataCommand extends Command
             ],
         ]);
         $this->ensureSection($page, 'presentation', 'Presentation', [
+            'title' => 'Presentation',
             'paragraphs' => [
                 'Bienvenue, je suis Helene.',
                 'Chaque seance est personnalisee selon vos besoins.',
             ],
+            'quote' => "Je m'adresse a tous ceux qui souhaitent prendre soin d'eux-memes et s'offrir une pause bienveillante.",
         ]);
         $this->ensureSection($page, 'approche', 'Approche', [
             'images' => ['/images/default/approche.jpg'],
@@ -190,6 +261,85 @@ final class SeedInitialDataCommand extends Command
                 'Une ecoute precise du corps.',
                 'Une parenthese bienveillante.',
             ],
+        ]);
+    }
+
+    private function ensureSoinsSections(): void
+    {
+        $page = $this->pageRepository->findOneBy(['slug' => 'soins']);
+        if ($page === null) {
+            return;
+        }
+
+        $this->ensureSection($page, 'hero', 'Soins & Massages', [
+            'image' => '/images/default/soins-hero.jpg',
+        ]);
+        $this->ensureSection($page, 'intro', 'Introduction', [
+            'paragraphs' => ['Chaque soin est pense comme un moment unique.'],
+        ]);
+        $this->ensureSection($page, 'tarifs', 'Carte & tarifs', [
+            'title' => 'Carte & tarifs',
+            'subtitle' => 'Une selection de soins ayurvediques, reflexologie plantaire, Kobido et massage prenatal.',
+            'offers' => [
+                [
+                    'title' => 'Ayurveda',
+                    'description' => "Les massages ayurvediques apaisent le corps et l'esprit, redonnent de l'ancrage et relancent la flamme interieure.",
+                    'prices' => ['Abhyanga · 1h · 80 EUR', 'Abhyanga · 1h30 · 100 EUR'],
+                ],
+                [
+                    'title' => 'Bol Kansu',
+                    'description' => "Le bol aux trois alliages est frotte contre la plante des pieds pour apaiser les esprits agites et reequilibrer l'element feu.",
+                    'prices' => ['Massage des pieds · 1h · 60 EUR'],
+                ],
+                [
+                    'title' => 'Padhabyanga',
+                    'description' => "Massage des jambes complete d'une reflexologie plantaire ou d'un bol Kansu pour delier les tensions.",
+                    'prices' => ['1h · 70 EUR'],
+                ],
+                [
+                    'title' => 'Massage prenatal',
+                    'description' => 'Un accompagnement en douceur pendant la grossesse. Le soin est adapte a chaque etape selon vos besoins.',
+                    'prices' => ["Tarif communique lors de l'entretien prealable."],
+                ],
+                [
+                    'title' => 'Reflexologie plantaire',
+                    'description' => 'En regulant les differents systemes du corps par le pied, cette pratique aide a reequilibrer le moment.',
+                    'prices' => ['Seance decouverte · 45 min · 50 EUR'],
+                ],
+                [
+                    'title' => 'Kobido',
+                    'description' => 'Massage du visage de tradition japonaise. Il fait circuler la lymphe et redonne du tonus pour un visage lumineux.',
+                    'prices' => ['Seance decouverte · 70 EUR'],
+                ],
+            ],
+        ]);
+    }
+
+    private function ensureEntrepriseSections(): void
+    {
+        $page = $this->pageRepository->findOneBy(['slug' => 'entreprise']);
+        if ($page === null) {
+            return;
+        }
+
+        $this->ensureSection($page, 'entreprise', 'Massage Amma en entreprise', [
+            'title' => 'Massage Amma en entreprise',
+            'subtitle' => 'Massage Amma assis : rapide, efficace, sans huile, sur chaise ergonomique.',
+            'teamTitle' => 'Pour vos equipes',
+            'teamBenefits' => [
+                'Moins de stress',
+                "Plus d'energie et de concentration",
+                'Moins de tensions musculaires',
+                'Plus de motivation',
+            ],
+            'companyTitle' => 'Pour votre entreprise',
+            'companyBenefits' => [
+                'Qualite de Vie au Travail renforcee',
+                'Collaborateurs plus performants et engages',
+                'Image positive et responsable',
+            ],
+            'characteristics' => ['10-20 min', 'Dans vos locaux', 'Sans huile', 'Chaise ergo'],
+            'quote' => 'Le massage Amma assis : un investissement simple et rentable pour le bien-etre collectif.',
         ]);
     }
 

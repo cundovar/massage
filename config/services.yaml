@@ -3,6 +3,7 @@
 
 parameters:
     app.images_directory: '%kernel.project_dir%/public/images'
+    app.doctrine_table_prefix: 'massage_'
 
 services:
     _defaults:
@@ -15,3 +16,7 @@ services:
     App\Service\MediaUploader:
         arguments:
             $imagesDirectory: '%app.images_directory%'
+
+    App\Doctrine\TablePrefixSubscriber:
+        arguments:
+            $prefix: '%app.doctrine_table_prefix%'
