@@ -28,6 +28,15 @@ class Page
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $metaDescription = null;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => true])]
+    private bool $showInNav = true;
+
+    #[ORM\Column(type: 'integer', options: ['default' => 0])]
+    private int $navOrder = 0;
+
+    #[ORM\Column(type: 'string', length: 100, nullable: true)]
+    private ?string $navTitle = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -103,6 +112,42 @@ class Page
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function isShowInNav(): bool
+    {
+        return $this->showInNav;
+    }
+
+    public function setShowInNav(bool $showInNav): self
+    {
+        $this->showInNav = $showInNav;
+
+        return $this;
+    }
+
+    public function getNavOrder(): int
+    {
+        return $this->navOrder;
+    }
+
+    public function setNavOrder(int $navOrder): self
+    {
+        $this->navOrder = $navOrder;
+
+        return $this;
+    }
+
+    public function getNavTitle(): ?string
+    {
+        return $this->navTitle;
+    }
+
+    public function setNavTitle(?string $navTitle): self
+    {
+        $this->navTitle = $navTitle;
+
+        return $this;
     }
 
     public function setCreatedAt(\DateTimeImmutable $createdAt): self
