@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Entity\Page;
 use App\Repository\PageRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,30 +20,22 @@ final class NavigationController extends AbstractController
     #[Route('', name: 'api_navigation_index', methods: ['GET'])]
     public function index(): JsonResponse
     {
-        $pages = $this->pageRepository->findBy([], ['id' => 'ASC']);
+        $pages = $this->pageRepository->findBy(
+            ['showInNav' => true],
+            ['navOrder' => 'ASC', 'id' => 'ASC']
+        );
 
-        $bySlug = [];
-        foreach ($pages as $page) {
-            $bySlug[$page->getSlug()] = $page;
-        }
-
-        $items = [];
-        foreach (['home', 'soins', 'about', 'contact'] as $slug) {
-            if (!isset($bySlug[$slug])) {
-                continue;
-            }
-
-            $items[] = [
-                'slug' => $slug,
-                'title' => $bySlug[$slug]->getTitle(),
-                'path' => $this->pathFromSlug($slug),
-            ];
-        }
+        $items = array_map(fn (Page $page): array => [
+            'slug' => $page->getSlug(),
+            'title' => $page->getNavTitle() ?? $page->getTitle(),
+            'path' => $this->pathFromSlug($page->getSlug()),
+        ], $pages);
 
         if ($items === []) {
             $items = [
                 ['slug' => 'home', 'title' => 'Accueil', 'path' => '/'],
-                ['slug' => 'soins', 'title' => 'Soins', 'path' => '/soins'],
+                ['slug' => 'soins', 'title' => 'Carte & tarifs', 'path' => '/soins'],
+                ['slug' => 'entreprise', 'title' => 'Entreprise', 'path' => '/entreprise'],
                 ['slug' => 'about', 'title' => 'À propos', 'path' => '/a-propos'],
                 ['slug' => 'contact', 'title' => 'Contact', 'path' => '/contact'],
             ];

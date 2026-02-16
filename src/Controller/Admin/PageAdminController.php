@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Entity\Page;
 use App\Entity\PageSection;
 use App\Repository\PageRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -37,6 +38,63 @@ final class PageAdminController extends AbstractController
         ], $pages);
 
         return $this->json(['items' => $items]);
+    }
+
+    #[Route('', name: 'api_admin_pages_create', methods: ['POST'])]
+    public function create(Request $request): JsonResponse
+    {
+        try {
+            $payload = $request->toArray();
+        } catch (\JsonException) {
+            return $this->json(['error' => 'Invalid JSON body.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $slug = trim((string) ($payload['slug'] ?? ''));
+        $title = trim((string) ($payload['title'] ?? ''));
+
+        if ($slug === '' || $title === '') {
+            return $this->json(['error' => 'slug et title requis'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $existingPage = $this->pageRepository->findOneBy(['slug' => $slug]);
+        if ($existingPage !== null) {
+            return $this->json(['error' => 'Ce slug existe déjà'], Response::HTTP_CONFLICT);
+        }
+
+        $now = new \DateTimeImmutable();
+        $page = (new Page())
+            ->setSlug($slug)
+            ->setTitle($title)
+            ->setMetaTitle(isset($payload['metaTitle']) ? trim((string) $payload['metaTitle']) : $title)
+            ->setMetaDescription(isset($payload['metaDescription']) ? trim((string) $payload['metaDescription']) : null)
+            ->setShowInNav(true)
+            ->setNavOrder($this->pageRepository->count([]))
+            ->setCreatedAt($now)
+            ->setUpdatedAt($now);
+
+        $heroSection = (new PageSection())
+            ->setSectionKey('hero')
+            ->setTitle($title)
+            ->setContent([
+                'title' => $title,
+                'image' => '/images/default/hero-1.jpg',
+            ])
+            ->setSortOrder(0)
+            ->setUpdatedAt($now);
+
+        $page->addSection($heroSection);
+
+        $this->entityManager->persist($page);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'id' => $page->getId(),
+            'slug' => $page->getSlug(),
+            'title' => $page->getTitle(),
+            'metaTitle' => $page->getMetaTitle(),
+            'metaDescription' => $page->getMetaDescription(),
+            'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
+        ], Response::HTTP_CREATED);
     }
 
     #[Route('/{slug}', name: 'api_admin_pages_show', methods: ['GET'])]
@@ -170,5 +228,24 @@ final class PageAdminController extends AbstractController
             'sortOrder' => $targetSection->getSortOrder(),
             'updatedAt' => $targetSection->getUpdatedAt()->format(DATE_ATOM),
         ]);
+    }
+
+    #[Route('/{slug}', name: 'api_admin_pages_delete', methods: ['DELETE'])]
+    public function delete(string $slug): JsonResponse
+    {
+        $protectedSlugs = ['home', 'contact', 'mentions-legales'];
+        if (in_array($slug, $protectedSlugs, true)) {
+            return $this->json(['error' => 'Cette page ne peut pas être supprimée'], Response::HTTP_FORBIDDEN);
+        }
+
+        $page = $this->pageRepository->findOneBy(['slug' => $slug]);
+        if ($page === null) {
+            return $this->json(['error' => 'Page non trouvée'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->entityManager->remove($page);
+        $this->entityManager->flush();
+
+        return $this->json(['success' => true]);
     }
 }
