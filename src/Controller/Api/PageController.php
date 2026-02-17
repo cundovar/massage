@@ -32,6 +32,7 @@ final class PageController extends AbstractController
         $sections = [];
         foreach ($page->getSections() as $section) {
             $sections[$section->getSectionKey()] = [
+                'type' => $section->getType(),
                 'title' => $section->getTitle(),
                 'content' => $section->getContent(),
             ];

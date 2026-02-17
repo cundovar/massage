@@ -21,11 +21,23 @@ class SiteSettings
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $logo = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $favicon = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $defaultMetaDescription = null;
+
     #[ORM\Column(length: 255)]
     private string $contactEmail;
 
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $contactPhone = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $googleMapsUrl = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $googleMapsEmbed = null;
 
     /** @var array<string, mixed>|null */
     #[ORM\Column(type: 'json', nullable: true)]
@@ -34,6 +46,22 @@ class SiteSettings
     /** @var array<string, mixed>|null */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $socialLinks = null;
+
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $hoursData = null;
+
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $bookingData = null;
+
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $appearanceData = null;
+
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $footerData = null;
 
     #[ORM\Column]
     private \DateTimeImmutable $updatedAt;
@@ -91,6 +119,30 @@ class SiteSettings
         return $this;
     }
 
+    public function getFavicon(): ?string
+    {
+        return $this->favicon;
+    }
+
+    public function setFavicon(?string $favicon): self
+    {
+        $this->favicon = $favicon;
+
+        return $this;
+    }
+
+    public function getDefaultMetaDescription(): ?string
+    {
+        return $this->defaultMetaDescription;
+    }
+
+    public function setDefaultMetaDescription(?string $defaultMetaDescription): self
+    {
+        $this->defaultMetaDescription = $defaultMetaDescription;
+
+        return $this;
+    }
+
     public function getContactEmail(): string
     {
         return $this->contactEmail;
@@ -111,6 +163,30 @@ class SiteSettings
     public function setContactPhone(?string $contactPhone): self
     {
         $this->contactPhone = $contactPhone;
+
+        return $this;
+    }
+
+    public function getGoogleMapsUrl(): ?string
+    {
+        return $this->googleMapsUrl;
+    }
+
+    public function setGoogleMapsUrl(?string $googleMapsUrl): self
+    {
+        $this->googleMapsUrl = $googleMapsUrl;
+
+        return $this;
+    }
+
+    public function getGoogleMapsEmbed(): ?string
+    {
+        return $this->googleMapsEmbed;
+    }
+
+    public function setGoogleMapsEmbed(?string $googleMapsEmbed): self
+    {
+        $this->googleMapsEmbed = $googleMapsEmbed;
 
         return $this;
     }
@@ -139,6 +215,62 @@ class SiteSettings
     public function setSocialLinks(?array $socialLinks): self
     {
         $this->socialLinks = $socialLinks;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getHoursData(): ?array
+    {
+        return $this->hoursData;
+    }
+
+    /** @param array<string, mixed>|null $hoursData */
+    public function setHoursData(?array $hoursData): self
+    {
+        $this->hoursData = $hoursData;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getBookingData(): ?array
+    {
+        return $this->bookingData;
+    }
+
+    /** @param array<string, mixed>|null $bookingData */
+    public function setBookingData(?array $bookingData): self
+    {
+        $this->bookingData = $bookingData;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getAppearanceData(): ?array
+    {
+        return $this->appearanceData;
+    }
+
+    /** @param array<string, mixed>|null $appearanceData */
+    public function setAppearanceData(?array $appearanceData): self
+    {
+        $this->appearanceData = $appearanceData;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getFooterData(): ?array
+    {
+        return $this->footerData;
+    }
+
+    /** @param array<string, mixed>|null $footerData */
+    public function setFooterData(?array $footerData): self
+    {
+        $this->footerData = $footerData;
 
         return $this;
     }

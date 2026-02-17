@@ -34,6 +34,9 @@ final class PageAdminController extends AbstractController
             'title' => $page->getTitle(),
             'metaTitle' => $page->getMetaTitle(),
             'metaDescription' => $page->getMetaDescription(),
+            'showInNav' => $page->isShowInNav(),
+            'navOrder' => $page->getNavOrder(),
+            'navTitle' => $page->getNavTitle(),
             'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
         ], $pages);
 
@@ -74,6 +77,7 @@ final class PageAdminController extends AbstractController
 
         $heroSection = (new PageSection())
             ->setSectionKey('hero')
+            ->setType('hero')
             ->setTitle($title)
             ->setContent([
                 'title' => $title,
@@ -93,6 +97,9 @@ final class PageAdminController extends AbstractController
             'title' => $page->getTitle(),
             'metaTitle' => $page->getMetaTitle(),
             'metaDescription' => $page->getMetaDescription(),
+            'showInNav' => $page->isShowInNav(),
+            'navOrder' => $page->getNavOrder(),
+            'navTitle' => $page->getNavTitle(),
             'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
         ], Response::HTTP_CREATED);
     }
@@ -109,6 +116,7 @@ final class PageAdminController extends AbstractController
         foreach ($page->getSections() as $section) {
             $sections[] = [
                 'key' => $section->getSectionKey(),
+                'type' => $section->getType(),
                 'title' => $section->getTitle(),
                 'content' => $section->getContent(),
                 'sortOrder' => $section->getSortOrder(),
@@ -122,6 +130,9 @@ final class PageAdminController extends AbstractController
             'title' => $page->getTitle(),
             'metaTitle' => $page->getMetaTitle(),
             'metaDescription' => $page->getMetaDescription(),
+            'showInNav' => $page->isShowInNav(),
+            'navOrder' => $page->getNavOrder(),
+            'navTitle' => $page->getNavTitle(),
             'sections' => $sections,
             'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
         ]);
@@ -160,8 +171,33 @@ final class PageAdminController extends AbstractController
             $page->setMetaDescription($metaDescription !== null ? trim((string) $metaDescription) : null);
         }
 
+        if (array_key_exists('showInNav', $payload)) {
+            $page->setShowInNav((bool) $payload['showInNav']);
+        }
+
+        if (array_key_exists('navOrder', $payload)) {
+            $page->setNavOrder((int) $payload['navOrder']);
+        }
+
+        if (array_key_exists('navTitle', $payload)) {
+            $navTitle = $payload['navTitle'];
+            $page->setNavTitle($navTitle !== null ? trim((string) $navTitle) : null);
+        }
+
         $page->setUpdatedAt(new \DateTimeImmutable());
         $this->entityManager->flush();
+
+        $sections = [];
+        foreach ($page->getSections() as $section) {
+            $sections[] = [
+                'key' => $section->getSectionKey(),
+                'type' => $section->getType(),
+                'title' => $section->getTitle(),
+                'content' => $section->getContent(),
+                'sortOrder' => $section->getSortOrder(),
+                'updatedAt' => $section->getUpdatedAt()->format(DATE_ATOM),
+            ];
+        }
 
         return $this->json([
             'id' => $page->getId(),
@@ -169,8 +205,85 @@ final class PageAdminController extends AbstractController
             'title' => $page->getTitle(),
             'metaTitle' => $page->getMetaTitle(),
             'metaDescription' => $page->getMetaDescription(),
+            'showInNav' => $page->isShowInNav(),
+            'navOrder' => $page->getNavOrder(),
+            'navTitle' => $page->getNavTitle(),
+            'sections' => $sections,
             'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
         ]);
+    }
+
+    #[Route('/{slug}/sections', name: 'api_admin_pages_sections_create', methods: ['POST'])]
+    public function createSection(string $slug, Request $request): JsonResponse
+    {
+        $page = $this->pageRepository->findOneBy(['slug' => $slug]);
+        if ($page === null) {
+            return $this->json(['error' => 'Page not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        try {
+            $payload = $request->toArray();
+        } catch (\JsonException) {
+            return $this->json(['error' => 'Invalid JSON body.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $keyRaw = trim((string) ($payload['key'] ?? ''));
+        if ($keyRaw === '') {
+            return $this->json(['error' => 'key requis'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $key = strtolower((string) preg_replace('/[^a-zA-Z0-9-]+/', '-', $keyRaw));
+        $key = trim($key, '-');
+        if ($key === '') {
+            return $this->json(['error' => 'key invalide'], Response::HTTP_BAD_REQUEST);
+        }
+
+        foreach ($page->getSections() as $section) {
+            if ($section->getSectionKey() === $key) {
+                return $this->json(['error' => 'Cette section existe déjà'], Response::HTTP_CONFLICT);
+            }
+        }
+
+        $allowedTypes = ['text', 'image', 'quote', 'hero'];
+        $type = (string) ($payload['type'] ?? 'text');
+        if (!in_array($type, $allowedTypes, true)) {
+            return $this->json(['error' => 'Type de section non valide'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $defaultContent = match ($type) {
+            'text' => ['title' => '', 'paragraphs' => [], 'image' => null],
+            'image' => ['image' => null, 'alt' => '', 'caption' => ''],
+            'quote' => ['text' => '', 'author' => ''],
+            'hero' => ['title' => '', 'image' => null],
+            default => [],
+        };
+
+        $maxSortOrder = -1;
+        foreach ($page->getSections() as $section) {
+            $maxSortOrder = max($maxSortOrder, $section->getSortOrder());
+        }
+
+        $now = new \DateTimeImmutable();
+        $section = (new PageSection())
+            ->setSectionKey($key)
+            ->setType($type)
+            ->setTitle(isset($payload['title']) ? trim((string) $payload['title']) : null)
+            ->setContent(isset($payload['content']) && is_array($payload['content']) ? $payload['content'] : $defaultContent)
+            ->setSortOrder($maxSortOrder + 1)
+            ->setUpdatedAt($now);
+
+        $page->addSection($section);
+        $page->setUpdatedAt($now);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'key' => $section->getSectionKey(),
+            'type' => $section->getType(),
+            'title' => $section->getTitle(),
+            'content' => $section->getContent(),
+            'sortOrder' => $section->getSortOrder(),
+            'updatedAt' => $section->getUpdatedAt()->format(DATE_ATOM),
+        ], Response::HTTP_CREATED);
     }
 
     #[Route('/{slug}/sections/{key}', name: 'api_admin_pages_sections_update', methods: ['PUT'])]
@@ -223,11 +336,40 @@ final class PageAdminController extends AbstractController
 
         return $this->json([
             'key' => $targetSection->getSectionKey(),
+            'type' => $targetSection->getType(),
             'title' => $targetSection->getTitle(),
             'content' => $targetSection->getContent(),
             'sortOrder' => $targetSection->getSortOrder(),
             'updatedAt' => $targetSection->getUpdatedAt()->format(DATE_ATOM),
         ]);
+    }
+
+    #[Route('/{slug}/sections/{key}', name: 'api_admin_pages_sections_delete', methods: ['DELETE'])]
+    public function deleteSection(string $slug, string $key): JsonResponse
+    {
+        $page = $this->pageRepository->findOneBy(['slug' => $slug]);
+        if ($page === null) {
+            return $this->json(['error' => 'Page not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $targetSection = null;
+        foreach ($page->getSections() as $section) {
+            if ($section->getSectionKey() === $key) {
+                $targetSection = $section;
+                break;
+            }
+        }
+
+        if (!$targetSection instanceof PageSection) {
+            return $this->json(['error' => 'Section not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $page->removeSection($targetSection);
+        $this->entityManager->remove($targetSection);
+        $page->setUpdatedAt(new \DateTimeImmutable());
+        $this->entityManager->flush();
+
+        return $this->json(['success' => true]);
     }
 
     #[Route('/{slug}', name: 'api_admin_pages_delete', methods: ['DELETE'])]
