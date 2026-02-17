@@ -21,6 +21,9 @@ class PageSection
     #[ORM\Column(name: 'section_key', length: 50)]
     private string $sectionKey;
 
+    #[ORM\Column(length: 50)]
+    private string $type = 'text';
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $title = null;
 
@@ -64,6 +67,18 @@ class PageSection
     public function setSectionKey(string $sectionKey): self
     {
         $this->sectionKey = $sectionKey;
+
+        return $this;
+    }
+
+    public function getType(): string
+    {
+        return $this->type;
+    }
+
+    public function setType(string $type): self
+    {
+        $this->type = $type;
 
         return $this;
     }

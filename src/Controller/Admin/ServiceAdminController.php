@@ -67,6 +67,17 @@ final class ServiceAdminController extends AbstractController
         return $this->json($this->normalizeService($service), Response::HTTP_CREATED);
     }
 
+    #[Route('/{id}', name: 'api_admin_services_show', methods: ['GET'])]
+    public function show(int $id): JsonResponse
+    {
+        $service = $this->serviceRepository->find($id);
+        if (!$service instanceof Service) {
+            return $this->json(['error' => 'Service not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json($this->normalizeService($service));
+    }
+
     #[Route('/{id}', name: 'api_admin_services_update', methods: ['PUT'])]
     public function update(int $id, Request $request): JsonResponse
     {

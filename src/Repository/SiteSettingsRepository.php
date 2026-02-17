@@ -15,4 +15,9 @@ class SiteSettingsRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, SiteSettings::class);
     }
+
+    public function findMain(): ?SiteSettings
+    {
+        return $this->find(1) ?? $this->findOneBy([]);
+    }
 }
