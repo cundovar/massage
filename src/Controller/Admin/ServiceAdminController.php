@@ -78,7 +78,7 @@ final class ServiceAdminController extends AbstractController
         return $this->json($this->normalizeService($service));
     }
 
-    #[Route('/{id}', name: 'api_admin_services_update', methods: ['PUT'])]
+    #[Route('/{id}', name: 'api_admin_services_update', methods: ['PUT', 'POST'])]
     public function update(int $id, Request $request): JsonResponse
     {
         $service = $this->serviceRepository->find($id);
