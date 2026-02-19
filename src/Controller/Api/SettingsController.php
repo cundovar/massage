@@ -38,7 +38,7 @@ final class SettingsController extends AbstractController
                 'hours' => ['schedule' => [], 'closedMessage' => ''],
                 'social' => ['instagram' => null, 'facebook' => null, 'linkedin' => null],
                 'booking' => ['minDelayHours' => 24, 'confirmationMessage' => ''],
-                'appearance' => ['primaryColor' => '#D4A574', 'darkModeDefault' => false],
+                'appearance' => $this->normalizeAppearance(null),
                 'footer' => ['copyrightText' => '', 'quickLinks' => []],
             ]);
         }
@@ -81,14 +81,29 @@ final class SettingsController extends AbstractController
                 'minDelayHours' => (int) ($booking['minDelayHours'] ?? 24),
                 'confirmationMessage' => (string) ($booking['confirmationMessage'] ?? ''),
             ],
-            'appearance' => [
-                'primaryColor' => (string) ($appearance['primaryColor'] ?? '#D4A574'),
-                'darkModeDefault' => (bool) ($appearance['darkModeDefault'] ?? false),
-            ],
+            'appearance' => $this->normalizeAppearance($appearance),
             'footer' => [
                 'copyrightText' => (string) ($footer['copyrightText'] ?? ''),
                 'quickLinks' => is_array($footer['quickLinks'] ?? null) ? $footer['quickLinks'] : [],
             ],
         ]);
+    }
+
+    /** @param array<string, mixed>|null $data */
+    private function normalizeAppearance(?array $data): array
+    {
+        $data = $data ?? [];
+        $validPresets = ['ayurveda', 'spa-luxe', 'nature', 'zen', 'energique'];
+        $validStyles = ['transparent', 'solid', 'sticky'];
+        $preset = (string) ($data['themePreset'] ?? 'ayurveda');
+        $headerStyle = (string) ($data['headerStyle'] ?? 'sticky');
+
+        return [
+            'themePreset' => in_array($preset, $validPresets, true) ? $preset : 'ayurveda',
+            'useCustomAccent' => (bool) ($data['useCustomAccent'] ?? false),
+            'customAccentColor' => $data['customAccentColor'] ?? null,
+            'headerStyle' => in_array($headerStyle, $validStyles, true) ? $headerStyle : 'sticky',
+            'showDarkModeToggle' => (bool) ($data['showDarkModeToggle'] ?? true),
+        ];
     }
 }
