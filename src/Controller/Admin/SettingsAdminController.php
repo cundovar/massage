@@ -151,12 +151,38 @@ final class SettingsAdminController extends AbstractController
 
         if (array_key_exists('appearance', $payload) && is_array($payload['appearance'])) {
             $appearance = $settings->getAppearanceData() ?? [];
-            if (array_key_exists('primaryColor', $payload['appearance'])) {
-                $appearance['primaryColor'] = trim((string) $payload['appearance']['primaryColor']);
+
+            if (array_key_exists('themePreset', $payload['appearance'])) {
+                $validPresets = ['ayurveda', 'spa-luxe', 'nature', 'zen', 'energique'];
+                $preset = trim((string) $payload['appearance']['themePreset']);
+                if (in_array($preset, $validPresets, true)) {
+                    $appearance['themePreset'] = $preset;
+                }
             }
-            if (array_key_exists('darkModeDefault', $payload['appearance'])) {
-                $appearance['darkModeDefault'] = (bool) $payload['appearance']['darkModeDefault'];
+
+            if (array_key_exists('useCustomAccent', $payload['appearance'])) {
+                $appearance['useCustomAccent'] = (bool) $payload['appearance']['useCustomAccent'];
             }
+
+            if (array_key_exists('customAccentColor', $payload['appearance'])) {
+                $color = trim((string) $payload['appearance']['customAccentColor']);
+                if ($color === '' || preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
+                    $appearance['customAccentColor'] = $color !== '' ? $color : null;
+                }
+            }
+
+            if (array_key_exists('headerStyle', $payload['appearance'])) {
+                $validStyles = ['transparent', 'solid', 'sticky'];
+                $style = trim((string) $payload['appearance']['headerStyle']);
+                if (in_array($style, $validStyles, true)) {
+                    $appearance['headerStyle'] = $style;
+                }
+            }
+
+            if (array_key_exists('showDarkModeToggle', $payload['appearance'])) {
+                $appearance['showDarkModeToggle'] = (bool) $payload['appearance']['showDarkModeToggle'];
+            }
+
             $settings->setAppearanceData($appearance);
         }
 
@@ -268,8 +294,11 @@ final class SettingsAdminController extends AbstractController
                 'confirmationMessage' => 'Merci pour votre demande. Je vous recontacte dans les 24h.',
             ])
             ->setAppearanceData([
-                'primaryColor' => '#D4A574',
-                'darkModeDefault' => false,
+                'themePreset' => 'ayurveda',
+                'useCustomAccent' => false,
+                'customAccentColor' => null,
+                'headerStyle' => 'sticky',
+                'showDarkModeToggle' => true,
             ])
             ->setFooterData([
                 'copyrightText' => '© 2024 Helene Massage & Ayurveda',
@@ -324,15 +353,30 @@ final class SettingsAdminController extends AbstractController
                 'minDelayHours' => (int) ($booking['minDelayHours'] ?? 24),
                 'confirmationMessage' => (string) ($booking['confirmationMessage'] ?? ''),
             ],
-            'appearance' => [
-                'primaryColor' => (string) ($appearance['primaryColor'] ?? '#D4A574'),
-                'darkModeDefault' => (bool) ($appearance['darkModeDefault'] ?? false),
-            ],
+            'appearance' => $this->normalizeAppearance($appearance),
             'footer' => [
                 'copyrightText' => (string) ($footer['copyrightText'] ?? ''),
                 'quickLinks' => is_array($footer['quickLinks'] ?? null) ? $footer['quickLinks'] : [],
             ],
             'updatedAt' => $settings->getUpdatedAt()->format(DATE_ATOM),
+        ];
+    }
+
+    /** @param array<string, mixed>|null $data */
+    private function normalizeAppearance(?array $data): array
+    {
+        $data = $data ?? [];
+        $validPresets = ['ayurveda', 'spa-luxe', 'nature', 'zen', 'energique'];
+        $validStyles = ['transparent', 'solid', 'sticky'];
+        $preset = (string) ($data['themePreset'] ?? 'ayurveda');
+        $headerStyle = (string) ($data['headerStyle'] ?? 'sticky');
+
+        return [
+            'themePreset' => in_array($preset, $validPresets, true) ? $preset : 'ayurveda',
+            'useCustomAccent' => (bool) ($data['useCustomAccent'] ?? false),
+            'customAccentColor' => $data['customAccentColor'] ?? null,
+            'headerStyle' => in_array($headerStyle, $validStyles, true) ? $headerStyle : 'sticky',
+            'showDarkModeToggle' => (bool) ($data['showDarkModeToggle'] ?? true),
         ];
     }
 }
