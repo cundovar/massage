@@ -7,6 +7,7 @@ namespace App\Controller\Admin;
 use App\Entity\Page;
 use App\Entity\PageSection;
 use App\Repository\PageRepository;
+use App\Service\ContactSettingsSync;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,7 +21,28 @@ final class PageAdminController extends AbstractController
     public function __construct(
         private readonly PageRepository $pageRepository,
         private readonly EntityManagerInterface $entityManager,
+        private readonly ContactSettingsSync $contactSettingsSync,
     ) {
+    }
+
+    #[Route('/contact/sync', name: 'api_admin_pages_contact_sync', methods: ['POST'])]
+    public function syncContactPage(): JsonResponse
+    {
+        $contactPage = $this->pageRepository->findOneBy(['slug' => 'contact']);
+        if ($contactPage === null) {
+            return $this->json(['error' => 'Page contact non trouvée'], Response::HTTP_NOT_FOUND);
+        }
+
+        foreach ($contactPage->getSections() as $section) {
+            if ($section->getType() === 'contact-infos') {
+                $this->contactSettingsSync->syncFromPageToSettings($section);
+            } elseif ($section->getType() === 'google-map') {
+                $this->contactSettingsSync->syncMapToSettings($section);
+            }
+        }
+        $this->entityManager->flush();
+
+        return $this->json(['success' => true, 'message' => 'Synchronisation effectuée']);
     }
 
     #[Route('', name: 'api_admin_pages_index', methods: ['GET'])]
@@ -275,6 +297,17 @@ final class PageAdminController extends AbstractController
         $page->setUpdatedAt($now);
         $this->entityManager->flush();
 
+        // Synchroniser vers Settings si c'est la page Contact
+        if ($slug === 'contact') {
+            if ($type === 'contact-infos') {
+                $this->contactSettingsSync->syncFromPageToSettings($section);
+                $this->entityManager->flush();
+            } elseif ($type === 'google-map') {
+                $this->contactSettingsSync->syncMapToSettings($section);
+                $this->entityManager->flush();
+            }
+        }
+
         return $this->json([
             'key' => $section->getSectionKey(),
             'type' => $section->getType(),
@@ -332,6 +365,17 @@ final class PageAdminController extends AbstractController
         $page->setUpdatedAt(new \DateTimeImmutable());
 
         $this->entityManager->flush();
+
+        // Synchroniser vers Settings si c'est la page Contact
+        if ($slug === 'contact') {
+            if ($targetSection->getType() === 'contact-infos') {
+                $this->contactSettingsSync->syncFromPageToSettings($targetSection);
+                $this->entityManager->flush();
+            } elseif ($targetSection->getType() === 'google-map') {
+                $this->contactSettingsSync->syncMapToSettings($targetSection);
+                $this->entityManager->flush();
+            }
+        }
 
         return $this->json([
             'key' => $targetSection->getSectionKey(),
