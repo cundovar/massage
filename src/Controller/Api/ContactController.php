@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Service\NotificationService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -14,7 +15,10 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/contact')]
 final class ContactController extends AbstractController
 {
-    public function __construct(private readonly LoggerInterface $logger)
+    public function __construct(
+        private readonly LoggerInterface $logger,
+        private readonly NotificationService $notificationService,
+    )
     {
     }
 
@@ -33,34 +37,43 @@ final class ContactController extends AbstractController
         $message = trim((string) ($payload['message'] ?? ''));
 
         $errors = [];
-        if ($name == '') {
-            $errors['name'] = 'Name is required.';
+        if ($name === '') {
+            $errors['name'] = 'Le nom est requis.';
         }
 
-        if ($email == '') {
-            $errors['email'] = 'Email is required.';
+        if ($email === '') {
+            $errors['email'] = "L'email est requis.";
         } elseif (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-            $errors['email'] = 'Email format is invalid.';
+            $errors['email'] = "Format d'email invalide.";
         }
 
-        if ($message == '') {
-            $errors['message'] = 'Message is required.';
+        if ($message === '') {
+            $errors['message'] = 'Le message est requis.';
         }
 
         if ($errors !== []) {
             return $this->json(['errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        try {
+            $this->notificationService->sendContactNotification($name, $email, $message, $phone);
+        } catch (\Throwable $exception) {
+            $this->logger->error('Failed to send contact notification email.', [
+                'error' => $exception->getMessage(),
+                'name' => $name,
+                'email' => $email,
+            ]);
+        }
+
         $this->logger->info('New contact request received.', [
             'name' => $name,
             'email' => $email,
             'phone' => $phone,
-            'message' => $message,
         ]);
 
         return $this->json([
             'status' => 'accepted',
-            'message' => 'Contact request received.',
+            'message' => 'Votre message a bien ete envoye.',
         ], Response::HTTP_ACCEPTED);
     }
 }

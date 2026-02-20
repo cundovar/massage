@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\SiteSettings;
 use App\Repository\SiteSettingsRepository;
+use App\Service\ContactSettingsSync;
 use App\Service\MediaUploader;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -24,6 +25,7 @@ final class SettingsAdminController extends AbstractController
         private readonly SiteSettingsRepository $siteSettingsRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly MediaUploader $mediaUploader,
+        private readonly ContactSettingsSync $contactSettingsSync,
     ) {
     }
 
@@ -97,7 +99,16 @@ final class SettingsAdminController extends AbstractController
                 $settings->setGoogleMapsUrl($contact['googleMapsUrl'] !== null ? trim((string) $contact['googleMapsUrl']) : null);
             }
             if (array_key_exists('googleMapsEmbed', $contact)) {
-                $settings->setGoogleMapsEmbed($contact['googleMapsEmbed'] !== null ? trim((string) $contact['googleMapsEmbed']) : null);
+                $embedValue = $contact['googleMapsEmbed'] !== null ? trim((string) $contact['googleMapsEmbed']) : null;
+                if ($embedValue !== null && $embedValue !== '') {
+                    // Extraire l'URL si c'est un code iframe complet
+                    if (preg_match('/src=["\']([^"\']+)["\']/', $embedValue, $matches)) {
+                        $embedValue = $matches[1];
+                    } elseif (preg_match('/^(https:\/\/www\.google\.com\/maps\/embed\?[^"\s]+)/', $embedValue, $matches)) {
+                        $embedValue = $matches[1];
+                    }
+                }
+                $settings->setGoogleMapsEmbed($embedValue);
             }
         }
 
@@ -206,6 +217,11 @@ final class SettingsAdminController extends AbstractController
         }
 
         $settings->setUpdatedAt(new \DateTimeImmutable());
+        $this->entityManager->flush();
+
+        // Synchroniser vers la page Contact
+        $this->contactSettingsSync->syncFromSettingsToPage($settings);
+        $this->contactSettingsSync->syncMapFromSettings($settings);
         $this->entityManager->flush();
 
         return $this->json($this->normalizeSettings($settings));
