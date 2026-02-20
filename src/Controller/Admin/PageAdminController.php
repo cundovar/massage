@@ -244,7 +244,21 @@ final class PageAdminController extends AbstractController
             }
         }
 
-        $allowedTypes = ['text', 'image', 'quote', 'hero'];
+        $allowedTypes = [
+            'hero',
+            'text',
+            'image',
+            'quote',
+            'gallery',
+            'presentation',
+            'approche',
+            'tarifs',
+            'entreprise',
+            'parcours',
+            'formations',
+            'philosophie',
+            'contact-cta',
+        ];
         $type = (string) ($payload['type'] ?? 'text');
         if (!in_array($type, $allowedTypes, true)) {
             return $this->json(['error' => 'Type de section non valide'], Response::HTTP_BAD_REQUEST);
@@ -269,7 +283,7 @@ final class PageAdminController extends AbstractController
             ->setType($type)
             ->setTitle(isset($payload['title']) ? trim((string) $payload['title']) : null)
             ->setContent(isset($payload['content']) && is_array($payload['content']) ? $payload['content'] : $defaultContent)
-            ->setSortOrder($maxSortOrder + 1)
+            ->setSortOrder(isset($payload['sortOrder']) ? (int) $payload['sortOrder'] : $maxSortOrder + 1)
             ->setUpdatedAt($now);
 
         $page->addSection($section);
