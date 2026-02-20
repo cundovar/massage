@@ -244,23 +244,8 @@ final class PageAdminController extends AbstractController
             }
         }
 
-        $allowedTypes = [
-            'hero',
-            'text',
-            'image',
-            'quote',
-            'gallery',
-            'presentation',
-            'approche',
-            'tarifs',
-            'entreprise',
-            'parcours',
-            'formations',
-            'philosophie',
-            'contact-cta',
-        ];
-        $type = (string) ($payload['type'] ?? 'text');
-        if (!in_array($type, $allowedTypes, true)) {
+        $type = strtolower(trim((string) ($payload['type'] ?? 'text')));
+        if ($type === '' || !preg_match('/^[a-z0-9-]+$/', $type)) {
             return $this->json(['error' => 'Type de section non valide'], Response::HTTP_BAD_REQUEST);
         }
 
