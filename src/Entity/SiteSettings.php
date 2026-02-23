@@ -63,6 +63,10 @@ class SiteSettings
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $footerData = null;
 
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $navigationData = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $updatedAt;
 
@@ -271,6 +275,20 @@ class SiteSettings
     public function setFooterData(?array $footerData): self
     {
         $this->footerData = $footerData;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getNavigationData(): ?array
+    {
+        return $this->navigationData;
+    }
+
+    /** @param array<string, mixed>|null $navigationData */
+    public function setNavigationData(?array $navigationData): self
+    {
+        $this->navigationData = $navigationData;
 
         return $this;
     }

@@ -216,6 +216,25 @@ final class SettingsAdminController extends AbstractController
             $settings->setFooterData($footer);
         }
 
+        if (array_key_exists('navigation', $payload) && is_array($payload['navigation'])) {
+            $navigation = $settings->getNavigationData() ?? [];
+            if (array_key_exists('externalLinks', $payload['navigation']) && is_array($payload['navigation']['externalLinks'])) {
+                $navigation['externalLinks'] = array_values(array_map(static function ($item): array {
+                    if (!is_array($item)) {
+                        return ['id' => '', 'label' => '', 'url' => '', 'openInNewTab' => true, 'order' => 0];
+                    }
+                    return [
+                        'id' => trim((string) ($item['id'] ?? '')),
+                        'label' => trim((string) ($item['label'] ?? '')),
+                        'url' => trim((string) ($item['url'] ?? '')),
+                        'openInNewTab' => (bool) ($item['openInNewTab'] ?? true),
+                        'order' => (int) ($item['order'] ?? 0),
+                    ];
+                }, $payload['navigation']['externalLinks']));
+            }
+            $settings->setNavigationData($navigation);
+        }
+
         $settings->setUpdatedAt(new \DateTimeImmutable());
         $this->entityManager->flush();
 
@@ -320,6 +339,9 @@ final class SettingsAdminController extends AbstractController
                 'copyrightText' => '© 2024 Helene Massage & Ayurveda',
                 'quickLinks' => [],
             ])
+            ->setNavigationData([
+                'externalLinks' => [],
+            ])
             ->setUpdatedAt(new \DateTimeImmutable());
 
         $this->entityManager->persist($settings);
@@ -336,6 +358,7 @@ final class SettingsAdminController extends AbstractController
         $booking = is_array($settings->getBookingData()) ? $settings->getBookingData() : [];
         $appearance = is_array($settings->getAppearanceData()) ? $settings->getAppearanceData() : [];
         $footer = is_array($settings->getFooterData()) ? $settings->getFooterData() : [];
+        $navigation = is_array($settings->getNavigationData()) ? $settings->getNavigationData() : [];
 
         return [
             'general' => [
@@ -373,6 +396,9 @@ final class SettingsAdminController extends AbstractController
             'footer' => [
                 'copyrightText' => (string) ($footer['copyrightText'] ?? ''),
                 'quickLinks' => is_array($footer['quickLinks'] ?? null) ? $footer['quickLinks'] : [],
+            ],
+            'navigation' => [
+                'externalLinks' => is_array($navigation['externalLinks'] ?? null) ? $navigation['externalLinks'] : [],
             ],
             'updatedAt' => $settings->getUpdatedAt()->format(DATE_ATOM),
         ];
