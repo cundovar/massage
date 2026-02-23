@@ -34,7 +34,7 @@ final class PageAdminController extends AbstractController
         }
 
         foreach ($contactPage->getSections() as $section) {
-            if ($section->getType() === 'contact-infos') {
+            if (in_array($section->getType(), ['contact-infos', 'contact-info'], true)) {
                 $this->contactSettingsSync->syncFromPageToSettings($section);
             } elseif ($section->getType() === 'google-map') {
                 $this->contactSettingsSync->syncMapToSettings($section);
@@ -63,6 +63,42 @@ final class PageAdminController extends AbstractController
         ], $pages);
 
         return $this->json(['items' => $items]);
+    }
+
+    #[Route('/section-types', name: 'api_admin_section_types', methods: ['GET'])]
+    public function sectionTypes(): JsonResponse
+    {
+        return $this->json([
+            'types' => [
+                ['value' => 'hero-home', 'label' => 'Hero accueil', 'category' => 'hero'],
+                ['value' => 'hero', 'label' => 'Hero (grand)', 'category' => 'hero'],
+                ['value' => 'hero-compact', 'label' => 'Hero (compact)', 'category' => 'hero'],
+                ['value' => 'text', 'label' => 'Texte', 'category' => 'content'],
+                ['value' => 'image', 'label' => 'Image', 'category' => 'content'],
+                ['value' => 'quote', 'label' => 'Citation', 'category' => 'content'],
+                ['value' => 'gallery', 'label' => 'Galerie', 'category' => 'content'],
+                ['value' => 'contact-form', 'label' => 'Formulaire de contact', 'category' => 'contact'],
+                ['value' => 'contact-info', 'label' => 'Infos de contact', 'category' => 'contact'],
+                ['value' => 'contact-infos', 'label' => 'Infos de contact (legacy)', 'category' => 'contact'],
+                ['value' => 'contact-cta', 'label' => 'Call to action', 'category' => 'contact'],
+                ['value' => 'google-map', 'label' => 'Carte Google Maps', 'category' => 'contact'],
+                ['value' => 'service-selector', 'label' => 'Sélecteur de soins', 'category' => 'services'],
+                ['value' => 'services-preview', 'label' => 'Aperçu des services', 'category' => 'services'],
+                ['value' => 'benefits-grid', 'label' => 'Grille avantages (2 colonnes)', 'category' => 'layout'],
+                ['value' => 'parcours', 'label' => 'Parcours', 'category' => 'about'],
+                ['value' => 'formations', 'label' => 'Formations', 'category' => 'about'],
+            ],
+            'animations' => [
+                ['value' => 'none', 'label' => 'Aucune'],
+                ['value' => 'fade-up', 'label' => 'Fondu + montée'],
+                ['value' => 'fade-down', 'label' => 'Fondu + descente'],
+                ['value' => 'slide-left', 'label' => 'Glissement gauche'],
+                ['value' => 'slide-right', 'label' => 'Glissement droite'],
+                ['value' => 'zoom-in', 'label' => 'Zoom entrant'],
+                ['value' => 'zoom-out', 'label' => 'Zoom sortant'],
+                ['value' => 'bounce', 'label' => 'Rebond'],
+            ],
+        ]);
     }
 
     #[Route('', name: 'api_admin_pages_create', methods: ['POST'])]
@@ -275,7 +311,32 @@ final class PageAdminController extends AbstractController
             'text' => ['title' => '', 'paragraphs' => [], 'image' => null],
             'image' => ['image' => null, 'alt' => '', 'caption' => ''],
             'quote' => ['text' => '', 'author' => ''],
-            'hero' => ['title' => '', 'image' => null],
+            'hero' => ['title' => '', 'subtitle' => '', 'image' => null, 'compact' => false],
+            'hero-compact' => ['title' => '', 'subtitle' => '', 'image' => null, 'compact' => true],
+            'contact-form' => [],
+            'contact-info', 'contact-infos' => [
+                'address' => ['street' => '', 'city' => ''],
+                'phone' => '',
+                'email' => '',
+                'hours' => [],
+            ],
+            'contact-cta' => ['title' => '', 'subtitle' => '', 'buttonText' => ''],
+            'google-map' => ['embedUrl' => ''],
+            'service-selector' => [],
+            'services-preview' => [],
+            'benefits-grid' => [
+                'leftTitle' => 'Pour vos équipes',
+                'leftSubtitle' => 'Avantages',
+                'leftItems' => [],
+                'rightTitle' => 'Pour votre entreprise',
+                'rightSubtitle' => 'Bénéfices',
+                'rightItems' => [],
+                'tags' => [],
+                'quote' => '',
+            ],
+            'parcours' => ['title' => '', 'paragraphs' => [], 'image' => null],
+            'formations' => ['items' => [], 'images' => []],
+            'gallery' => ['title' => '', 'images' => []],
             default => [],
         };
 
@@ -299,7 +360,7 @@ final class PageAdminController extends AbstractController
 
         // Synchroniser vers Settings si c'est la page Contact
         if ($slug === 'contact') {
-            if ($type === 'contact-infos') {
+            if (in_array($type, ['contact-infos', 'contact-info'], true)) {
                 $this->contactSettingsSync->syncFromPageToSettings($section);
                 $this->entityManager->flush();
             } elseif ($type === 'google-map') {
@@ -368,7 +429,7 @@ final class PageAdminController extends AbstractController
 
         // Synchroniser vers Settings si c'est la page Contact
         if ($slug === 'contact') {
-            if ($targetSection->getType() === 'contact-infos') {
+            if (in_array($targetSection->getType(), ['contact-infos', 'contact-info'], true)) {
                 $this->contactSettingsSync->syncFromPageToSettings($targetSection);
                 $this->entityManager->flush();
             } elseif ($targetSection->getType() === 'google-map') {
