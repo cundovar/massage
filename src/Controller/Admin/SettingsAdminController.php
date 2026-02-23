@@ -38,7 +38,7 @@ final class SettingsAdminController extends AbstractController
         return $this->json($this->normalizeSettings($settings));
     }
 
-    #[Route('', name: 'api_admin_settings_update', methods: ['PUT'])]
+    #[Route('', name: 'api_admin_settings_update', methods: ['PUT', 'POST'])]
     public function update(Request $request): JsonResponse
     {
         $settings = $this->getOrCreateSettings();
