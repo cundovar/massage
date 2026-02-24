@@ -213,6 +213,25 @@ final class SettingsAdminController extends AbstractController
                     ];
                 }, $payload['footer']['quickLinks']));
             }
+            if (array_key_exists('showSocialLinks', $payload['footer'])) {
+                $footer['showSocialLinks'] = (bool) $payload['footer']['showSocialLinks'];
+            }
+            if (array_key_exists('showContactInfo', $payload['footer'])) {
+                $footer['showContactInfo'] = (bool) $payload['footer']['showContactInfo'];
+            }
+            if (array_key_exists('showHours', $payload['footer'])) {
+                $footer['showHours'] = (bool) $payload['footer']['showHours'];
+            }
+            if (array_key_exists('customDescription', $payload['footer'])) {
+                $value = $payload['footer']['customDescription'];
+                $footer['customDescription'] = ($value !== null && trim((string) $value) !== '') ? trim((string) $value) : null;
+            }
+            if (array_key_exists('mentionsLegalesText', $payload['footer'])) {
+                $footer['mentionsLegalesText'] = trim((string) $payload['footer']['mentionsLegalesText']);
+            }
+            if (array_key_exists('showMentionsLegales', $payload['footer'])) {
+                $footer['showMentionsLegales'] = (bool) $payload['footer']['showMentionsLegales'];
+            }
             $settings->setFooterData($footer);
         }
 
@@ -338,6 +357,12 @@ final class SettingsAdminController extends AbstractController
             ->setFooterData([
                 'copyrightText' => '© 2024 Helene Massage & Ayurveda',
                 'quickLinks' => [],
+                'showSocialLinks' => true,
+                'showContactInfo' => true,
+                'showHours' => false,
+                'customDescription' => null,
+                'mentionsLegalesText' => 'Mentions legales',
+                'showMentionsLegales' => true,
             ])
             ->setNavigationData([
                 'externalLinks' => [],
@@ -396,6 +421,12 @@ final class SettingsAdminController extends AbstractController
             'footer' => [
                 'copyrightText' => (string) ($footer['copyrightText'] ?? ''),
                 'quickLinks' => is_array($footer['quickLinks'] ?? null) ? $footer['quickLinks'] : [],
+                'showSocialLinks' => (bool) ($footer['showSocialLinks'] ?? true),
+                'showContactInfo' => (bool) ($footer['showContactInfo'] ?? true),
+                'showHours' => (bool) ($footer['showHours'] ?? false),
+                'customDescription' => $footer['customDescription'] ?? null,
+                'mentionsLegalesText' => (string) ($footer['mentionsLegalesText'] ?? 'Mentions legales'),
+                'showMentionsLegales' => (bool) ($footer['showMentionsLegales'] ?? true),
             ],
             'navigation' => [
                 'externalLinks' => is_array($navigation['externalLinks'] ?? null) ? $navigation['externalLinks'] : [],
