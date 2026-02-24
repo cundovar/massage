@@ -321,9 +321,21 @@ final class PageAdminController extends AbstractController
                 'hours' => [],
             ],
             'contact-cta' => ['title' => '', 'subtitle' => '', 'buttonText' => ''],
+            'contact-layout' => [
+                'address' => ['street' => '', 'city' => ''],
+                'phone' => '',
+                'email' => '',
+                'hours' => [],
+            ],
             'google-map' => ['embedUrl' => ''],
-            'service-selector' => [],
-            'services-preview' => [],
+            'service-selector' => ['title' => 'Carte & tarifs', 'subtitle' => '', 'offers' => []],
+            'services-preview' => [
+                'subtitle' => 'Mes soins',
+                'title' => 'Une gamme de soins pour votre bien-être',
+                'buttonText' => 'Voir tous les soins',
+                'buttonLink' => '/soins',
+                'items' => [],
+            ],
             'benefits-grid' => [
                 'leftTitle' => 'Pour vos équipes',
                 'leftSubtitle' => 'Avantages',
@@ -346,11 +358,15 @@ final class PageAdminController extends AbstractController
         }
 
         $now = new \DateTimeImmutable();
+        $contentData = isset($payload['content']) && is_array($payload['content']) ? $payload['content'] : $defaultContent;
+        // Force clean array to avoid reference issues
+        $cleanContent = json_decode(json_encode($contentData), true);
+
         $section = (new PageSection())
             ->setSectionKey($key)
             ->setType($type)
             ->setTitle(isset($payload['title']) ? trim((string) $payload['title']) : null)
-            ->setContent(isset($payload['content']) && is_array($payload['content']) ? $payload['content'] : $defaultContent)
+            ->setContent($cleanContent)
             ->setSortOrder(isset($payload['sortOrder']) ? (int) $payload['sortOrder'] : $maxSortOrder + 1)
             ->setUpdatedAt($now);
 
@@ -415,7 +431,9 @@ final class PageAdminController extends AbstractController
                 return $this->json(['errors' => ['content' => 'Content must be a JSON object.']], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
-            $targetSection->setContent($payload['content']);
+            // Force Doctrine to detect JSON change by creating a new array
+            $newContent = json_decode(json_encode($payload['content']), true);
+            $targetSection->setContent($newContent);
         }
 
         if (array_key_exists('sortOrder', $payload)) {
