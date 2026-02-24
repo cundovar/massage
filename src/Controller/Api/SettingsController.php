@@ -39,7 +39,16 @@ final class SettingsController extends AbstractController
                 'social' => ['instagram' => null, 'facebook' => null, 'linkedin' => null],
                 'booking' => ['minDelayHours' => 24, 'confirmationMessage' => ''],
                 'appearance' => $this->normalizeAppearance(null),
-                'footer' => ['copyrightText' => '', 'quickLinks' => []],
+                'footer' => [
+                    'copyrightText' => '',
+                    'quickLinks' => [],
+                    'showSocialLinks' => true,
+                    'showContactInfo' => true,
+                    'showHours' => false,
+                    'customDescription' => null,
+                    'mentionsLegalesText' => 'Mentions legales',
+                    'showMentionsLegales' => true,
+                ],
             ]);
         }
 
@@ -85,6 +94,12 @@ final class SettingsController extends AbstractController
             'footer' => [
                 'copyrightText' => (string) ($footer['copyrightText'] ?? ''),
                 'quickLinks' => is_array($footer['quickLinks'] ?? null) ? $footer['quickLinks'] : [],
+                'showSocialLinks' => (bool) ($footer['showSocialLinks'] ?? true),
+                'showContactInfo' => (bool) ($footer['showContactInfo'] ?? true),
+                'showHours' => (bool) ($footer['showHours'] ?? false),
+                'customDescription' => $footer['customDescription'] ?? null,
+                'mentionsLegalesText' => (string) ($footer['mentionsLegalesText'] ?? 'Mentions legales'),
+                'showMentionsLegales' => (bool) ($footer['showMentionsLegales'] ?? true),
             ],
         ]);
     }
