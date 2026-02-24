@@ -17,6 +17,10 @@ services:
         arguments:
             $imagesDirectory: '%app.images_directory%'
 
+    App\Controller\ImageProxyController:
+        arguments:
+            $imagesDirectory: '%app.images_directory%'
+
     App\Doctrine\TablePrefixSubscriber:
         arguments:
             $prefix: '%app.doctrine_table_prefix%'
