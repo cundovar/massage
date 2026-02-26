@@ -194,6 +194,11 @@ final class SettingsAdminController extends AbstractController
                 $appearance['showDarkModeToggle'] = (bool) $payload['appearance']['showDarkModeToggle'];
             }
 
+            if (array_key_exists('bodyBackgroundImage', $payload['appearance'])) {
+                $value = $payload['appearance']['bodyBackgroundImage'];
+                $appearance['bodyBackgroundImage'] = ($value !== null && trim((string) $value) !== '') ? trim((string) $value) : null;
+            }
+
             $settings->setAppearanceData($appearance);
         }
 
@@ -353,6 +358,7 @@ final class SettingsAdminController extends AbstractController
                 'customAccentColor' => null,
                 'headerStyle' => 'sticky',
                 'showDarkModeToggle' => true,
+                'bodyBackgroundImage' => null,
             ])
             ->setFooterData([
                 'copyrightText' => '© 2024 Helene Massage & Ayurveda',
@@ -450,6 +456,9 @@ final class SettingsAdminController extends AbstractController
             'customAccentColor' => $data['customAccentColor'] ?? null,
             'headerStyle' => in_array($headerStyle, $validStyles, true) ? $headerStyle : 'sticky',
             'showDarkModeToggle' => (bool) ($data['showDarkModeToggle'] ?? true),
+            'bodyBackgroundImage' => is_string($data['bodyBackgroundImage'] ?? null) && trim((string) $data['bodyBackgroundImage']) !== ''
+                ? trim((string) $data['bodyBackgroundImage'])
+                : null,
         ];
     }
 }
