@@ -119,6 +119,9 @@ final class SettingsController extends AbstractController
             'customAccentColor' => $data['customAccentColor'] ?? null,
             'headerStyle' => in_array($headerStyle, $validStyles, true) ? $headerStyle : 'sticky',
             'showDarkModeToggle' => (bool) ($data['showDarkModeToggle'] ?? true),
+            'bodyBackgroundImage' => is_string($data['bodyBackgroundImage'] ?? null) && trim((string) $data['bodyBackgroundImage']) !== ''
+                ? trim((string) $data['bodyBackgroundImage'])
+                : null,
         ];
     }
 }
