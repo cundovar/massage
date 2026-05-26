@@ -66,7 +66,8 @@ final class AuthController extends AbstractController
 
         $adminUser = (new AdminUser())
             ->setName($name)
-            ->setEmail($email);
+            ->setEmail($email)
+            ->setRoles([AdminUser::ROLE_ADMIN]);
 
         $adminUser->setPassword($this->passwordHasher->hashPassword($adminUser, $password));
 

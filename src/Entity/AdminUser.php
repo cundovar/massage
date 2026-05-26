@@ -13,6 +13,10 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[ORM\UniqueConstraint(name: 'uniq_admin_user_email', columns: ['email'])]
 class AdminUser implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    public const ROLE_ADMIN = 'ROLE_ADMIN';
+    public const ROLE_DEV = 'ROLE_DEV';
+    public const ROLE_USER = 'ROLE_USER';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -36,7 +40,7 @@ class AdminUser implements UserInterface, PasswordAuthenticatedUserInterface
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
-        $this->roles = ['ROLE_ADMIN'];
+        $this->roles = [self::ROLE_ADMIN];
     }
 
     public function getId(): ?int
@@ -101,8 +105,8 @@ class AdminUser implements UserInterface, PasswordAuthenticatedUserInterface
     public function getRoles(): array
     {
         $roles = $this->roles;
-        if (!in_array('ROLE_ADMIN', $roles, true)) {
-            $roles[] = 'ROLE_ADMIN';
+        if (!in_array(self::ROLE_USER, $roles, true)) {
+            $roles[] = self::ROLE_USER;
         }
 
         return array_values(array_unique($roles));
@@ -111,7 +115,11 @@ class AdminUser implements UserInterface, PasswordAuthenticatedUserInterface
     /** @param list<string> $roles */
     public function setRoles(array $roles): self
     {
-        $this->roles = $roles;
+        $allowedRoles = [self::ROLE_ADMIN, self::ROLE_DEV, self::ROLE_USER];
+        $this->roles = array_values(array_unique(array_filter(
+            $roles,
+            static fn (string $role): bool => in_array($role, $allowedRoles, true),
+        )));
 
         return $this;
     }

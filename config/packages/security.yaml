@@ -4,6 +4,10 @@ security:
             algorithm: bcrypt
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
+    role_hierarchy:
+        ROLE_ADMIN: ROLE_BACKOFFICE
+        ROLE_DEV: ROLE_BACKOFFICE
+
     providers:
         app_admin_user_provider:
             entity:
@@ -41,7 +45,7 @@ security:
         - { path: ^/api/services$, roles: PUBLIC_ACCESS }
         - { path: ^/api/reservation-requests$, roles: PUBLIC_ACCESS }
         - { path: ^/api/contact$, roles: PUBLIC_ACCESS }
-        - { path: ^/api/admin, roles: ROLE_ADMIN }
+        - { path: ^/api/admin, roles: ROLE_BACKOFFICE }
 
 when@test:
     security:
