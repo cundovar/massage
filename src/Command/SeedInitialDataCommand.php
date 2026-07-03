@@ -445,7 +445,8 @@ final class SeedInitialDataCommand extends Command
 
         $admin = (new AdminUser())
             ->setEmail($email)
-            ->setName('Admin Helene');
+            ->setName('Admin Helene')
+            ->setRoles([AdminUser::ROLE_ADMIN]);
 
         $admin->setPassword($this->passwordHasher->hashPassword($admin, $plainPassword));
 

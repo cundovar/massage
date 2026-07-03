@@ -13,6 +13,10 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[ORM\UniqueConstraint(name: 'uniq_admin_user_email', columns: ['email'])]
 class AdminUser implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    public const ROLE_ADMIN = 'ROLE_ADMIN';
+    public const ROLE_DEV = 'ROLE_DEV';
+    public const ROLE_USER = 'ROLE_USER';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -33,10 +37,19 @@ class AdminUser implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $passwordResetTokenHash = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $passwordResetRequestedAt = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $passwordResetExpiresAt = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
-        $this->roles = ['ROLE_ADMIN'];
+        $this->roles = [self::ROLE_ADMIN];
     }
 
     public function getId(): ?int
@@ -92,6 +105,51 @@ class AdminUser implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function getPasswordResetTokenHash(): ?string
+    {
+        return $this->passwordResetTokenHash;
+    }
+
+    public function setPasswordResetTokenHash(?string $passwordResetTokenHash): self
+    {
+        $this->passwordResetTokenHash = $passwordResetTokenHash;
+
+        return $this;
+    }
+
+    public function getPasswordResetRequestedAt(): ?\DateTimeImmutable
+    {
+        return $this->passwordResetRequestedAt;
+    }
+
+    public function setPasswordResetRequestedAt(?\DateTimeImmutable $passwordResetRequestedAt): self
+    {
+        $this->passwordResetRequestedAt = $passwordResetRequestedAt;
+
+        return $this;
+    }
+
+    public function getPasswordResetExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->passwordResetExpiresAt;
+    }
+
+    public function setPasswordResetExpiresAt(?\DateTimeImmutable $passwordResetExpiresAt): self
+    {
+        $this->passwordResetExpiresAt = $passwordResetExpiresAt;
+
+        return $this;
+    }
+
+    public function clearPasswordResetToken(): self
+    {
+        $this->passwordResetTokenHash = null;
+        $this->passwordResetRequestedAt = null;
+        $this->passwordResetExpiresAt = null;
+
+        return $this;
+    }
+
     public function getUserIdentifier(): string
     {
         return $this->email;
@@ -101,8 +159,8 @@ class AdminUser implements UserInterface, PasswordAuthenticatedUserInterface
     public function getRoles(): array
     {
         $roles = $this->roles;
-        if (!in_array('ROLE_ADMIN', $roles, true)) {
-            $roles[] = 'ROLE_ADMIN';
+        if (!in_array(self::ROLE_USER, $roles, true)) {
+            $roles[] = self::ROLE_USER;
         }
 
         return array_values(array_unique($roles));
@@ -111,7 +169,11 @@ class AdminUser implements UserInterface, PasswordAuthenticatedUserInterface
     /** @param list<string> $roles */
     public function setRoles(array $roles): self
     {
-        $this->roles = $roles;
+        $allowedRoles = [self::ROLE_ADMIN, self::ROLE_DEV, self::ROLE_USER];
+        $this->roles = array_values(array_unique(array_filter(
+            $roles,
+            static fn (string $role): bool => in_array($role, $allowedRoles, true),
+        )));
 
         return $this;
     }

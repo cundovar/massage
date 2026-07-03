@@ -4,6 +4,10 @@ security:
             algorithm: bcrypt
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
+    role_hierarchy:
+        ROLE_ADMIN: ROLE_BACKOFFICE
+        ROLE_DEV: ROLE_BACKOFFICE
+
     providers:
         app_admin_user_provider:
             entity:
@@ -35,13 +39,15 @@ security:
     access_control:
         - { path: ^/api/register$, roles: PUBLIC_ACCESS }
         - { path: ^/api/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/password/forgot$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/password/reset$, roles: PUBLIC_ACCESS }
         - { path: ^/api/settings$, roles: PUBLIC_ACCESS }
         - { path: ^/api/navigation$, roles: PUBLIC_ACCESS }
         - { path: ^/api/pages, roles: PUBLIC_ACCESS }
         - { path: ^/api/services$, roles: PUBLIC_ACCESS }
         - { path: ^/api/reservation-requests$, roles: PUBLIC_ACCESS }
         - { path: ^/api/contact$, roles: PUBLIC_ACCESS }
-        - { path: ^/api/admin, roles: ROLE_ADMIN }
+        - { path: ^/api/admin, roles: ROLE_BACKOFFICE }
 
 when@test:
     security:
