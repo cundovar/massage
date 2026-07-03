@@ -73,6 +73,8 @@ final class PageAdminController extends AbstractController
                 ['value' => 'hero-home', 'label' => 'Hero accueil', 'category' => 'hero'],
                 ['value' => 'hero', 'label' => 'Hero (grand)', 'category' => 'hero'],
                 ['value' => 'hero-compact', 'label' => 'Hero (compact)', 'category' => 'hero'],
+                ['value' => 'spacer', 'label' => 'Espacement', 'category' => 'layout'],
+                ['value' => 'neutral', 'label' => 'Bloc neutre', 'category' => 'content'],
                 ['value' => 'text', 'label' => 'Texte', 'category' => 'content'],
                 ['value' => 'image', 'label' => 'Image', 'category' => 'content'],
                 ['value' => 'quote', 'label' => 'Citation', 'category' => 'content'],
@@ -178,6 +180,7 @@ final class PageAdminController extends AbstractController
                 'title' => $section->getTitle(),
                 'content' => $section->getContent(),
                 'sortOrder' => $section->getSortOrder(),
+                'visible' => $section->isVisible(),
                 'updatedAt' => $section->getUpdatedAt()->format(DATE_ATOM),
             ];
         }
@@ -253,6 +256,7 @@ final class PageAdminController extends AbstractController
                 'title' => $section->getTitle(),
                 'content' => $section->getContent(),
                 'sortOrder' => $section->getSortOrder(),
+                'visible' => $section->isVisible(),
                 'updatedAt' => $section->getUpdatedAt()->format(DATE_ATOM),
             ];
         }
@@ -309,6 +313,19 @@ final class PageAdminController extends AbstractController
 
         $defaultContent = match ($type) {
             'text' => ['title' => '', 'paragraphs' => [], 'image' => null],
+            'neutral' => [
+                'eyebrow' => '',
+                'title' => '',
+                'subtitle' => '',
+                'paragraphs' => [''],
+                'buttonText' => '',
+                'buttonLink' => '',
+                'align' => 'left',
+                'width' => 'normal',
+                'background' => 'transparent',
+                'spacing' => 'normal',
+            ],
+            'spacer' => ['size' => 'md'],
             'image' => ['image' => null, 'alt' => '', 'caption' => ''],
             'quote' => ['text' => '', 'author' => ''],
             'hero' => ['title' => '', 'subtitle' => '', 'image' => null, 'compact' => false],
@@ -368,6 +385,7 @@ final class PageAdminController extends AbstractController
             ->setTitle(isset($payload['title']) ? trim((string) $payload['title']) : null)
             ->setContent($cleanContent)
             ->setSortOrder(isset($payload['sortOrder']) ? (int) $payload['sortOrder'] : $maxSortOrder + 1)
+            ->setVisible(isset($payload['visible']) ? (bool) $payload['visible'] : true)
             ->setUpdatedAt($now);
 
         $page->addSection($section);
@@ -391,6 +409,7 @@ final class PageAdminController extends AbstractController
             'title' => $section->getTitle(),
             'content' => $section->getContent(),
             'sortOrder' => $section->getSortOrder(),
+            'visible' => $section->isVisible(),
             'updatedAt' => $section->getUpdatedAt()->format(DATE_ATOM),
         ], Response::HTTP_CREATED);
     }
@@ -440,6 +459,10 @@ final class PageAdminController extends AbstractController
             $targetSection->setSortOrder((int) $payload['sortOrder']);
         }
 
+        if (array_key_exists('visible', $payload)) {
+            $targetSection->setVisible((bool) $payload['visible']);
+        }
+
         $targetSection->setUpdatedAt(new \DateTimeImmutable());
         $page->setUpdatedAt(new \DateTimeImmutable());
 
@@ -462,6 +485,7 @@ final class PageAdminController extends AbstractController
             'title' => $targetSection->getTitle(),
             'content' => $targetSection->getContent(),
             'sortOrder' => $targetSection->getSortOrder(),
+            'visible' => $targetSection->isVisible(),
             'updatedAt' => $targetSection->getUpdatedAt()->format(DATE_ATOM),
         ]);
     }

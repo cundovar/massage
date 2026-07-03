@@ -6,8 +6,10 @@ namespace App\Controller\Admin;
 
 use App\Entity\SiteSettings;
 use App\Repository\SiteSettingsRepository;
+use App\Service\AppearanceNormalizer;
 use App\Service\ContactSettingsSync;
 use App\Service\MediaUploader;
+use App\Service\UploadErrorResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -26,6 +28,8 @@ final class SettingsAdminController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly MediaUploader $mediaUploader,
         private readonly ContactSettingsSync $contactSettingsSync,
+        private readonly AppearanceNormalizer $appearanceNormalizer,
+        private readonly UploadErrorResolver $uploadErrorResolver,
     ) {
     }
 
@@ -290,7 +294,7 @@ final class SettingsAdminController extends AbstractController
         }
 
         if (!$uploaded->isValid()) {
-            return $this->json(['errors' => ['file' => $this->resolveUploadErrorMessage($uploaded)]], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['errors' => ['file' => $this->uploadErrorResolver->resolve($uploaded)]], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         if ($uploaded->getSize() > self::MAX_FILE_SIZE_BYTES) {
@@ -423,7 +427,7 @@ final class SettingsAdminController extends AbstractController
                 'minDelayHours' => (int) ($booking['minDelayHours'] ?? 24),
                 'confirmationMessage' => (string) ($booking['confirmationMessage'] ?? ''),
             ],
-            'appearance' => $this->normalizeAppearance($appearance),
+            'appearance' => $this->appearanceNormalizer->normalize($appearance),
             'footer' => [
                 'copyrightText' => (string) ($footer['copyrightText'] ?? ''),
                 'quickLinks' => is_array($footer['quickLinks'] ?? null) ? $footer['quickLinks'] : [],
@@ -439,40 +443,5 @@ final class SettingsAdminController extends AbstractController
             ],
             'updatedAt' => $settings->getUpdatedAt()->format(DATE_ATOM),
         ];
-    }
-
-    /** @param array<string, mixed>|null $data */
-    private function normalizeAppearance(?array $data): array
-    {
-        $data = $data ?? [];
-        $validPresets = ['ayurveda', 'spa-luxe', 'nature', 'zen', 'energique'];
-        $validStyles = ['transparent', 'solid', 'sticky'];
-        $preset = (string) ($data['themePreset'] ?? 'ayurveda');
-        $headerStyle = (string) ($data['headerStyle'] ?? 'sticky');
-
-        return [
-            'themePreset' => in_array($preset, $validPresets, true) ? $preset : 'ayurveda',
-            'useCustomAccent' => (bool) ($data['useCustomAccent'] ?? false),
-            'customAccentColor' => $data['customAccentColor'] ?? null,
-            'headerStyle' => in_array($headerStyle, $validStyles, true) ? $headerStyle : 'sticky',
-            'showDarkModeToggle' => (bool) ($data['showDarkModeToggle'] ?? true),
-            'bodyBackgroundImage' => is_string($data['bodyBackgroundImage'] ?? null) && trim((string) $data['bodyBackgroundImage']) !== ''
-                ? trim((string) $data['bodyBackgroundImage'])
-                : null,
-        ];
-    }
-
-    private function resolveUploadErrorMessage(UploadedFile $uploaded): string
-    {
-        return match ($uploaded->getError()) {
-            UPLOAD_ERR_INI_SIZE => sprintf('File exceeds server upload limit (%s).', (string) (ini_get('upload_max_filesize') ?: 'php.ini')),
-            UPLOAD_ERR_FORM_SIZE => sprintf('File exceeds form upload limit (%s).', (string) (ini_get('post_max_size') ?: 'form limit')),
-            UPLOAD_ERR_PARTIAL => 'File was only partially uploaded.',
-            UPLOAD_ERR_NO_FILE => 'No file was uploaded.',
-            UPLOAD_ERR_NO_TMP_DIR => 'Server temporary directory is missing.',
-            UPLOAD_ERR_CANT_WRITE => 'Server failed to write the uploaded file.',
-            UPLOAD_ERR_EXTENSION => 'Upload blocked by a server extension.',
-            default => 'Invalid upload.',
-        };
     }
 }

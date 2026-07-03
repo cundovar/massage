@@ -34,6 +34,9 @@ class PageSection
     #[ORM\Column]
     private int $sortOrder = 0;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => true])]
+    private bool $visible = true;
+
     #[ORM\Column]
     private \DateTimeImmutable $updatedAt;
 
@@ -117,6 +120,18 @@ class PageSection
     public function setSortOrder(int $sortOrder): self
     {
         $this->sortOrder = $sortOrder;
+
+        return $this;
+    }
+
+    public function isVisible(): bool
+    {
+        return $this->visible;
+    }
+
+    public function setVisible(bool $visible): self
+    {
+        $this->visible = $visible;
 
         return $this;
     }
