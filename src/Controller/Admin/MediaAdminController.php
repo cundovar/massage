@@ -7,6 +7,7 @@ namespace App\Controller\Admin;
 use App\Entity\Media;
 use App\Repository\MediaRepository;
 use App\Service\MediaUploader;
+use App\Service\UploadErrorResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -24,6 +25,7 @@ final class MediaAdminController extends AbstractController
         private readonly MediaRepository $mediaRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly MediaUploader $mediaUploader,
+        private readonly UploadErrorResolver $uploadErrorResolver,
     ) {
     }
 
@@ -46,7 +48,7 @@ final class MediaAdminController extends AbstractController
         }
 
         if (!$uploaded->isValid()) {
-            return $this->json(['errors' => ['file' => $this->resolveUploadErrorMessage($uploaded)]], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['errors' => ['file' => $this->uploadErrorResolver->resolve($uploaded)]], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         if ($uploaded->getSize() > self::MAX_FILE_SIZE_BYTES) {
@@ -131,19 +133,5 @@ final class MediaAdminController extends AbstractController
             'height' => $media->getHeight(),
             'uploadedAt' => $media->getUploadedAt()->format(DATE_ATOM),
         ];
-    }
-
-    private function resolveUploadErrorMessage(UploadedFile $uploaded): string
-    {
-        return match ($uploaded->getError()) {
-            UPLOAD_ERR_INI_SIZE => sprintf('File exceeds server upload limit (%s).', (string) (ini_get('upload_max_filesize') ?: 'php.ini')),
-            UPLOAD_ERR_FORM_SIZE => sprintf('File exceeds form upload limit (%s).', (string) (ini_get('post_max_size') ?: 'form limit')),
-            UPLOAD_ERR_PARTIAL => 'File was only partially uploaded.',
-            UPLOAD_ERR_NO_FILE => 'No file was uploaded.',
-            UPLOAD_ERR_NO_TMP_DIR => 'Server temporary directory is missing.',
-            UPLOAD_ERR_CANT_WRITE => 'Server failed to write the uploaded file.',
-            UPLOAD_ERR_EXTENSION => 'Upload blocked by a server extension.',
-            default => 'Invalid upload.',
-        };
     }
 }

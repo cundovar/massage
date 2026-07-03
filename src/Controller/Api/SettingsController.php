@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Repository\SiteSettingsRepository;
+use App\Service\AppearanceNormalizer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
@@ -12,8 +13,10 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/settings')]
 final class SettingsController extends AbstractController
 {
-    public function __construct(private readonly SiteSettingsRepository $siteSettingsRepository)
-    {
+    public function __construct(
+        private readonly SiteSettingsRepository $siteSettingsRepository,
+        private readonly AppearanceNormalizer $appearanceNormalizer,
+    ) {
     }
 
     #[Route('', name: 'api_settings_show', methods: ['GET'])]
@@ -38,7 +41,7 @@ final class SettingsController extends AbstractController
                 'hours' => ['schedule' => [], 'closedMessage' => ''],
                 'social' => ['instagram' => null, 'facebook' => null, 'linkedin' => null],
                 'booking' => ['minDelayHours' => 24, 'confirmationMessage' => ''],
-                'appearance' => $this->normalizeAppearance(null),
+                'appearance' => $this->appearanceNormalizer->normalize(null),
                 'footer' => [
                     'copyrightText' => '',
                     'quickLinks' => [],
@@ -90,7 +93,7 @@ final class SettingsController extends AbstractController
                 'minDelayHours' => (int) ($booking['minDelayHours'] ?? 24),
                 'confirmationMessage' => (string) ($booking['confirmationMessage'] ?? ''),
             ],
-            'appearance' => $this->normalizeAppearance($appearance),
+            'appearance' => $this->appearanceNormalizer->normalize($appearance),
             'footer' => [
                 'copyrightText' => (string) ($footer['copyrightText'] ?? ''),
                 'quickLinks' => is_array($footer['quickLinks'] ?? null) ? $footer['quickLinks'] : [],
@@ -102,26 +105,5 @@ final class SettingsController extends AbstractController
                 'showMentionsLegales' => (bool) ($footer['showMentionsLegales'] ?? true),
             ],
         ]);
-    }
-
-    /** @param array<string, mixed>|null $data */
-    private function normalizeAppearance(?array $data): array
-    {
-        $data = $data ?? [];
-        $validPresets = ['ayurveda', 'spa-luxe', 'nature', 'zen', 'energique'];
-        $validStyles = ['transparent', 'solid', 'sticky'];
-        $preset = (string) ($data['themePreset'] ?? 'ayurveda');
-        $headerStyle = (string) ($data['headerStyle'] ?? 'sticky');
-
-        return [
-            'themePreset' => in_array($preset, $validPresets, true) ? $preset : 'ayurveda',
-            'useCustomAccent' => (bool) ($data['useCustomAccent'] ?? false),
-            'customAccentColor' => $data['customAccentColor'] ?? null,
-            'headerStyle' => in_array($headerStyle, $validStyles, true) ? $headerStyle : 'sticky',
-            'showDarkModeToggle' => (bool) ($data['showDarkModeToggle'] ?? true),
-            'bodyBackgroundImage' => is_string($data['bodyBackgroundImage'] ?? null) && trim((string) $data['bodyBackgroundImage']) !== ''
-                ? trim((string) $data['bodyBackgroundImage'])
-                : null,
-        ];
     }
 }

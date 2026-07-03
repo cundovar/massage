@@ -12,6 +12,9 @@ final class NotificationService
 {
     public function __construct(
         private readonly MailerInterface $mailer,
+        private readonly string $adminEmail,
+        private readonly string $fromEmail,
+        private readonly string $fromName,
     ) {
     }
 
@@ -21,13 +24,11 @@ final class NotificationService
         string $message,
         ?string $phone = null,
     ): void {
-        $adminEmail = 'lnmiserey@hotmail.com';
-
         $emailContent = $this->buildContactEmailContent($name, $email, $message, $phone);
 
         $emailMessage = (new Email())
-            ->from(new Address('cundo364@gmail.com', 'Site Helene Massage'))
-            ->to($adminEmail)
+            ->from(new Address($this->fromEmail, $this->fromName))
+            ->to($this->adminEmail)
             ->replyTo($email)
             ->subject('Nouveau message de contact - ' . $name)
             ->html($emailContent);
