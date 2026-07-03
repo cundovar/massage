@@ -39,6 +39,8 @@ security:
     access_control:
         - { path: ^/api/register$, roles: PUBLIC_ACCESS }
         - { path: ^/api/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/password/forgot$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/password/reset$, roles: PUBLIC_ACCESS }
         - { path: ^/api/settings$, roles: PUBLIC_ACCESS }
         - { path: ^/api/navigation$, roles: PUBLIC_ACCESS }
         - { path: ^/api/pages, roles: PUBLIC_ACCESS }
