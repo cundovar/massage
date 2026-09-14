@@ -6,7 +6,9 @@ namespace App\Controller\Admin;
 
 use App\Entity\Page;
 use App\Entity\PageSection;
+use App\Entity\PageSlugRedirect;
 use App\Repository\PageRepository;
+use App\Repository\PageSlugRedirectRepository;
 use App\Service\ContactSettingsSync;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,8 +20,26 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/admin/pages')]
 final class PageAdminController extends AbstractController
 {
+    /** @var list<string> */
+    private const IMMUTABLE_SLUGS = ['home', 'about', 'contact', 'mentions-legales'];
+
+    /** @var list<string> */
+    private const RESERVED_SLUGS = [
+        'home',
+        'about',
+        'contact',
+        'mentions-legales',
+        'a-propos',
+        'admin',
+        'api',
+        'register',
+        '_next',
+        'favicon-ico',
+    ];
+
     public function __construct(
         private readonly PageRepository $pageRepository,
+        private readonly PageSlugRedirectRepository $pageSlugRedirectRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly ContactSettingsSync $contactSettingsSync,
     ) {
@@ -50,7 +70,7 @@ final class PageAdminController extends AbstractController
     {
         $pages = $this->pageRepository->findBy([], ['id' => 'ASC']);
 
-        $items = array_map(static fn ($page): array => [
+        $items = array_map(fn (Page $page): array => [
             'id' => $page->getId(),
             'slug' => $page->getSlug(),
             'title' => $page->getTitle(),
@@ -59,6 +79,7 @@ final class PageAdminController extends AbstractController
             'showInNav' => $page->isShowInNav(),
             'navOrder' => $page->getNavOrder(),
             'navTitle' => $page->getNavTitle(),
+            'slugEditable' => $this->isSlugEditable($page),
             'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
         ], $pages);
 
@@ -160,6 +181,7 @@ final class PageAdminController extends AbstractController
             'showInNav' => $page->isShowInNav(),
             'navOrder' => $page->getNavOrder(),
             'navTitle' => $page->getNavTitle(),
+            'slugEditable' => $this->isSlugEditable($page),
             'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
         ], Response::HTTP_CREATED);
     }
@@ -194,6 +216,7 @@ final class PageAdminController extends AbstractController
             'showInNav' => $page->isShowInNav(),
             'navOrder' => $page->getNavOrder(),
             'navTitle' => $page->getNavTitle(),
+            'slugEditable' => $this->isSlugEditable($page),
             'sections' => $sections,
             'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
         ]);
@@ -213,13 +236,39 @@ final class PageAdminController extends AbstractController
             return $this->json(['error' => 'Invalid JSON body.'], Response::HTTP_BAD_REQUEST);
         }
 
+        $title = null;
         if (array_key_exists('title', $payload)) {
             $title = trim((string) $payload['title']);
             if ($title === '') {
-                return $this->json(['errors' => ['title' => 'Title cannot be empty.']], Response::HTTP_UNPROCESSABLE_ENTITY);
+                return $this->json(['errors' => ['title' => 'Le titre est obligatoire.']], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        }
+
+        $nextSlug = null;
+        if (array_key_exists('slug', $payload)) {
+            $nextSlug = $this->normalizeSlug((string) $payload['slug']);
+            $slugError = $this->validateSlugChange($page, $nextSlug);
+            if ($slugError !== null) {
+                return $this->json(['errors' => ['slug' => $slugError]], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        }
+
+        if ($title !== null) {
+            $page->setTitle($title);
+        }
+
+        if ($nextSlug !== null && $nextSlug !== $page->getSlug()) {
+            $previousSlug = $page->getSlug();
+            $existingRedirect = $this->pageSlugRedirectRepository->findOneByOldSlug($nextSlug);
+            if ($existingRedirect !== null) {
+                $this->entityManager->remove($existingRedirect);
             }
 
-            $page->setTitle($title);
+            $redirect = (new PageSlugRedirect())
+                ->setPage($page)
+                ->setOldSlug($previousSlug);
+            $this->entityManager->persist($redirect);
+            $page->setSlug($nextSlug);
         }
 
         if (array_key_exists('metaTitle', $payload)) {
@@ -270,9 +319,58 @@ final class PageAdminController extends AbstractController
             'showInNav' => $page->isShowInNav(),
             'navOrder' => $page->getNavOrder(),
             'navTitle' => $page->getNavTitle(),
+            'slugEditable' => $this->isSlugEditable($page),
             'sections' => $sections,
             'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
         ]);
+    }
+
+    private function normalizeSlug(string $slug): string
+    {
+        $normalized = strtolower(trim($slug));
+        $normalized = (string) preg_replace('/[^a-z0-9]+/', '-', $normalized);
+
+        return trim($normalized, '-');
+    }
+
+    private function validateSlugChange(Page $page, string $nextSlug): ?string
+    {
+        if ($nextSlug === '') {
+            return 'L’URL est obligatoire.';
+        }
+
+        if (strlen($nextSlug) > 100 || !preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $nextSlug)) {
+            return 'Utilisez uniquement des lettres minuscules, chiffres et tirets.';
+        }
+
+        if ($nextSlug === $page->getSlug()) {
+            return null;
+        }
+
+        if (!$this->isSlugEditable($page)) {
+            return 'L’URL de cette page système ne peut pas être modifiée.';
+        }
+
+        if (in_array($nextSlug, self::RESERVED_SLUGS, true)) {
+            return 'Cette URL est réservée.';
+        }
+
+        $pageWithSlug = $this->pageRepository->findOneBy(['slug' => $nextSlug]);
+        if ($pageWithSlug !== null) {
+            return 'Cette URL est déjà utilisée par une autre page.';
+        }
+
+        $redirect = $this->pageSlugRedirectRepository->findOneByOldSlug($nextSlug);
+        if ($redirect !== null && $redirect->getPage()?->getId() !== $page->getId()) {
+            return 'Cette URL redirige déjà vers une autre page.';
+        }
+
+        return null;
+    }
+
+    private function isSlugEditable(Page $page): bool
+    {
+        return !in_array($page->getSlug(), self::IMMUTABLE_SLUGS, true);
     }
 
     #[Route('/{slug}/sections', name: 'api_admin_pages_sections_create', methods: ['POST'])]
