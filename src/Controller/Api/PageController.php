@@ -39,6 +39,7 @@ final class PageController extends AbstractController
                 'type' => $section->getType(),
                 'title' => $section->getTitle(),
                 'content' => $section->getContent(),
+                'sortOrder' => $section->getSortOrder(),
             ];
         }
 
