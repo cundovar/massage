@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Address;
-use Symfony\Component\Mime\Email;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class NotificationService
 {
     public function __construct(
-        private readonly MailerInterface $mailer,
+        private readonly HttpClientInterface $httpClient,
         private readonly string $adminEmail,
-        private readonly string $fromEmail,
-        private readonly string $fromName,
+        private readonly string $apiKey,
+        private readonly string $senderEmail,
+        private readonly string $senderName,
     ) {
     }
 
@@ -24,16 +23,32 @@ final class NotificationService
         string $message,
         ?string $phone = null,
     ): void {
-        $emailContent = $this->buildContactEmailContent($name, $email, $message, $phone);
+        $response = $this->httpClient->request('POST', 'https://api.brevo.com/v3/smtp/email', [
+            'headers' => [
+                'accept' => 'application/json',
+                'api-key' => $this->apiKey,
+            ],
+            'json' => [
+                'sender' => [
+                    'email' => $this->senderEmail,
+                    'name' => $this->senderName,
+                ],
+                'to' => [['email' => $this->adminEmail]],
+                'replyTo' => [
+                    'email' => $email,
+                    'name' => $name,
+                ],
+                'subject' => 'Nouveau message de contact - ' . $name,
+                'htmlContent' => $this->buildContactEmailContent($name, $email, $message, $phone),
+                'textContent' => $this->buildContactEmailText($name, $email, $message, $phone),
+                'tags' => ['contact-form'],
+            ],
+        ]);
 
-        $emailMessage = (new Email())
-            ->from(new Address($this->fromEmail, $this->fromName))
-            ->to($this->adminEmail)
-            ->replyTo($email)
-            ->subject('Nouveau message de contact - ' . $name)
-            ->html($emailContent);
-
-        $this->mailer->send($emailMessage);
+        $statusCode = $response->getStatusCode();
+        if ($statusCode < 200 || $statusCode >= 300) {
+            throw new \RuntimeException(sprintf('Brevo API returned HTTP %d.', $statusCode));
+        }
     }
 
     private function buildContactEmailContent(
@@ -87,5 +102,16 @@ final class NotificationService
         </body>
         </html>
         HTML;
+    }
+
+    private function buildContactEmailText(
+        string $name,
+        string $email,
+        string $message,
+        ?string $phone,
+    ): string {
+        $phoneLine = $phone !== null && $phone !== '' ? "\nTelephone : {$phone}" : '';
+
+        return "Nouveau message de contact\n\nNom : {$name}\nEmail : {$email}{$phoneLine}\n\nMessage :\n{$message}";
     }
 }

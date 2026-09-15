@@ -60,9 +60,11 @@ final class ContactController extends AbstractController
         } catch (\Throwable $exception) {
             $this->logger->error('Failed to send contact notification email.', [
                 'error' => $exception->getMessage(),
-                'name' => $name,
-                'email' => $email,
             ]);
+
+            return $this->json([
+                'error' => "L'envoi du message est momentanement indisponible. Veuillez reessayer.",
+            ], Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
         $this->logger->info('New contact request received.', [
@@ -72,8 +74,8 @@ final class ContactController extends AbstractController
         ]);
 
         return $this->json([
-            'status' => 'accepted',
+            'status' => 'sent',
             'message' => 'Votre message a bien ete envoye.',
-        ], Response::HTTP_ACCEPTED);
+        ]);
     }
 }
