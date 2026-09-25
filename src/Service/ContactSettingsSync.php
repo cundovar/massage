@@ -15,6 +15,9 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final class ContactSettingsSync
 {
+    /** @var list<string> */
+    private const CONTACT_SECTION_TYPES = ['contact-infos', 'contact-info', 'contact-layout'];
+
     /**
      * Extrait l'URL src d'un code iframe ou retourne l'URL telle quelle si c'est déjà une URL.
      */
@@ -56,32 +59,34 @@ final class ContactSettingsSync
             return;
         }
 
-        $infosSection = null;
+        $contactSections = [];
         foreach ($contactPage->getSections() as $section) {
-            if ($section->getType() === 'contact-infos') {
-                $infosSection = $section;
-                break;
+            if (in_array($section->getType(), self::CONTACT_SECTION_TYPES, true)) {
+                $contactSections[] = $section;
             }
         }
 
-        if ($infosSection === null) {
+        if ($contactSections === []) {
             return;
         }
 
         $address = $settings->getAddress() ?? [];
         $hoursData = $settings->getHoursData() ?? [];
 
-        $content = $infosSection->getContent() ?? [];
-        $content['address'] = [
-            'street' => (string) ($address['street'] ?? ''),
-            'city' => trim(($address['postalCode'] ?? '') . ' ' . ($address['city'] ?? '')),
-        ];
-        $content['phone'] = $settings->getContactPhone() ?? '';
-        $content['email'] = $settings->getContactEmail();
-        $content['hours'] = $hoursData['schedule'] ?? [];
+        foreach ($contactSections as $contactSection) {
+            $content = $contactSection->getContent() ?? [];
+            $content['address'] = [
+                'street' => (string) ($address['street'] ?? ''),
+                'city' => trim(($address['postalCode'] ?? '') . ' ' . ($address['city'] ?? '')),
+            ];
+            $content['phone'] = $settings->getContactPhone() ?? '';
+            $content['email'] = $settings->getContactEmail();
+            $content['hours'] = $hoursData['schedule'] ?? [];
 
-        $infosSection->setContent($content);
-        $infosSection->setUpdatedAt(new \DateTimeImmutable());
+            $contactSection->setContent($content);
+            $contactSection->setUpdatedAt(new \DateTimeImmutable());
+        }
+
         $contactPage->setUpdatedAt(new \DateTimeImmutable());
     }
 

@@ -34,7 +34,7 @@ final class PageAdminController extends AbstractController
         }
 
         foreach ($contactPage->getSections() as $section) {
-            if (in_array($section->getType(), ['contact-infos', 'contact-info'], true)) {
+            if (in_array($section->getType(), ['contact-infos', 'contact-info', 'contact-layout'], true)) {
                 $this->contactSettingsSync->syncFromPageToSettings($section);
             } elseif ($section->getType() === 'google-map') {
                 $this->contactSettingsSync->syncMapToSettings($section);
@@ -394,7 +394,7 @@ final class PageAdminController extends AbstractController
 
         // Synchroniser vers Settings si c'est la page Contact
         if ($slug === 'contact') {
-            if (in_array($type, ['contact-infos', 'contact-info'], true)) {
+            if (in_array($type, ['contact-infos', 'contact-info', 'contact-layout'], true)) {
                 $this->contactSettingsSync->syncFromPageToSettings($section);
                 $this->entityManager->flush();
             } elseif ($type === 'google-map') {
@@ -470,7 +470,7 @@ final class PageAdminController extends AbstractController
 
         // Synchroniser vers Settings si c'est la page Contact
         if ($slug === 'contact') {
-            if (in_array($targetSection->getType(), ['contact-infos', 'contact-info'], true)) {
+            if (in_array($targetSection->getType(), ['contact-infos', 'contact-info', 'contact-layout'], true)) {
                 $this->contactSettingsSync->syncFromPageToSettings($targetSection);
                 $this->entityManager->flush();
             } elseif ($targetSection->getType() === 'google-map') {
