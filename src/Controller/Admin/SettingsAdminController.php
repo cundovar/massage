@@ -99,6 +99,31 @@ final class SettingsAdminController extends AbstractController
                 $settings->setAddress($address);
             }
 
+            if (array_key_exists('locations', $contact) && is_array($contact['locations'])) {
+                $locations = array_values(array_map(static function ($location): array {
+                    if (!is_array($location)) {
+                        return ['label' => '', 'street' => '', 'postalCode' => '', 'city' => ''];
+                    }
+
+                    return [
+                        'label' => trim((string) ($location['label'] ?? '')),
+                        'street' => trim((string) ($location['street'] ?? '')),
+                        'postalCode' => trim((string) ($location['postalCode'] ?? '')),
+                        'city' => trim((string) ($location['city'] ?? '')),
+                    ];
+                }, $contact['locations']));
+                $address = $settings->getAddress() ?? [];
+                $address['locations'] = $locations;
+                if (isset($locations[0])) {
+                    $address = array_merge($address, [
+                        'street' => $locations[0]['street'],
+                        'postalCode' => $locations[0]['postalCode'],
+                        'city' => $locations[0]['city'],
+                    ]);
+                }
+                $settings->setAddress($address);
+            }
+
             if (array_key_exists('googleMapsUrl', $contact)) {
                 $settings->setGoogleMapsUrl($contact['googleMapsUrl'] !== null ? trim((string) $contact['googleMapsUrl']) : null);
             }
@@ -228,6 +253,16 @@ final class SettingsAdminController extends AbstractController
             if (array_key_exists('showContactInfo', $payload['footer'])) {
                 $footer['showContactInfo'] = (bool) $payload['footer']['showContactInfo'];
             }
+            if (array_key_exists('addressDisplay', $payload['footer'])) {
+                $display = (string) $payload['footer']['addressDisplay'];
+                $footer['addressDisplay'] = in_array($display, ['all', 'selected', 'summary'], true) ? $display : 'all';
+            }
+            if (array_key_exists('selectedAddressIndex', $payload['footer'])) {
+                $footer['selectedAddressIndex'] = max(0, (int) $payload['footer']['selectedAddressIndex']);
+            }
+            if (array_key_exists('addressSummary', $payload['footer'])) {
+                $footer['addressSummary'] = trim((string) $payload['footer']['addressSummary']);
+            }
             if (array_key_exists('showHours', $payload['footer'])) {
                 $footer['showHours'] = (bool) $payload['footer']['showHours'];
             }
@@ -338,6 +373,12 @@ final class SettingsAdminController extends AbstractController
                 'street' => '123 Rue du Bien-Etre',
                 'postalCode' => '75011',
                 'city' => 'Paris',
+                'locations' => [[
+                    'label' => 'Lieu principal',
+                    'street' => '123 Rue du Bien-Etre',
+                    'postalCode' => '75011',
+                    'city' => 'Paris',
+                ]],
             ])
             ->setSocialLinks([
                 'instagram' => null,
@@ -369,6 +410,9 @@ final class SettingsAdminController extends AbstractController
                 'quickLinks' => [],
                 'showSocialLinks' => true,
                 'showContactInfo' => true,
+                'addressDisplay' => 'all',
+                'selectedAddressIndex' => 0,
+                'addressSummary' => 'Deux lieux pour les massages',
                 'showHours' => false,
                 'customDescription' => null,
                 'mentionsLegalesText' => 'Mentions legales',
@@ -408,6 +452,14 @@ final class SettingsAdminController extends AbstractController
                     'postalCode' => (string) ($address['postalCode'] ?? ''),
                     'city' => (string) ($address['city'] ?? ''),
                 ],
+                'locations' => is_array($address['locations'] ?? null)
+                    ? $address['locations']
+                    : [[
+                        'label' => 'Lieu principal',
+                        'street' => (string) ($address['street'] ?? ''),
+                        'postalCode' => (string) ($address['postalCode'] ?? ''),
+                        'city' => (string) ($address['city'] ?? ''),
+                    ]],
                 'phone' => $settings->getContactPhone() ?? '',
                 'email' => $settings->getContactEmail(),
                 'googleMapsUrl' => $settings->getGoogleMapsUrl(),
@@ -433,6 +485,9 @@ final class SettingsAdminController extends AbstractController
                 'quickLinks' => is_array($footer['quickLinks'] ?? null) ? $footer['quickLinks'] : [],
                 'showSocialLinks' => (bool) ($footer['showSocialLinks'] ?? true),
                 'showContactInfo' => (bool) ($footer['showContactInfo'] ?? true),
+                'addressDisplay' => (string) ($footer['addressDisplay'] ?? 'all'),
+                'selectedAddressIndex' => (int) ($footer['selectedAddressIndex'] ?? 0),
+                'addressSummary' => (string) ($footer['addressSummary'] ?? 'Deux lieux pour les massages'),
                 'showHours' => (bool) ($footer['showHours'] ?? false),
                 'customDescription' => $footer['customDescription'] ?? null,
                 'mentionsLegalesText' => (string) ($footer['mentionsLegalesText'] ?? 'Mentions legales'),
