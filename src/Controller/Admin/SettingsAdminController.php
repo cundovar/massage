@@ -22,6 +22,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class SettingsAdminController extends AbstractController
 {
     private const MAX_FILE_SIZE_BYTES = 2_097_152;
+    private const FOOTER_STYLES = ['light', 'theme', 'dark', 'transparent', 'custom'];
 
     public function __construct(
         private readonly SiteSettingsRepository $siteSettingsRepository,
@@ -276,6 +277,14 @@ final class SettingsAdminController extends AbstractController
             if (array_key_exists('showMentionsLegales', $payload['footer'])) {
                 $footer['showMentionsLegales'] = (bool) $payload['footer']['showMentionsLegales'];
             }
+            if (array_key_exists('style', $payload['footer'])) {
+                $style = (string) $payload['footer']['style'];
+                $footer['style'] = in_array($style, self::FOOTER_STYLES, true) ? $style : 'light';
+            }
+            if (array_key_exists('backgroundColor', $payload['footer'])) {
+                $color = trim((string) $payload['footer']['backgroundColor']);
+                $footer['backgroundColor'] = preg_match('/^#[0-9a-fA-F]{6}$/', $color) === 1 ? strtoupper($color) : '';
+            }
             $settings->setFooterData($footer);
         }
 
@@ -417,6 +426,8 @@ final class SettingsAdminController extends AbstractController
                 'customDescription' => null,
                 'mentionsLegalesText' => 'Mentions legales',
                 'showMentionsLegales' => true,
+                'style' => 'light',
+                'backgroundColor' => '',
             ])
             ->setNavigationData([
                 'externalLinks' => [],
@@ -492,6 +503,8 @@ final class SettingsAdminController extends AbstractController
                 'customDescription' => $footer['customDescription'] ?? null,
                 'mentionsLegalesText' => (string) ($footer['mentionsLegalesText'] ?? 'Mentions legales'),
                 'showMentionsLegales' => (bool) ($footer['showMentionsLegales'] ?? true),
+                'style' => (string) ($footer['style'] ?? 'light'),
+                'backgroundColor' => (string) ($footer['backgroundColor'] ?? ''),
             ],
             'navigation' => [
                 'externalLinks' => is_array($navigation['externalLinks'] ?? null) ? $navigation['externalLinks'] : [],

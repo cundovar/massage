@@ -55,6 +55,8 @@ final class SettingsController extends AbstractController
                     'customDescription' => null,
                     'mentionsLegalesText' => 'Mentions legales',
                     'showMentionsLegales' => true,
+                    'style' => 'light',
+                    'backgroundColor' => '',
                 ],
             ]);
         }
@@ -118,6 +120,8 @@ final class SettingsController extends AbstractController
                 'customDescription' => $footer['customDescription'] ?? null,
                 'mentionsLegalesText' => (string) ($footer['mentionsLegalesText'] ?? 'Mentions legales'),
                 'showMentionsLegales' => (bool) ($footer['showMentionsLegales'] ?? true),
+                'style' => (string) ($footer['style'] ?? 'light'),
+                'backgroundColor' => (string) ($footer['backgroundColor'] ?? ''),
             ],
         ]);
     }
