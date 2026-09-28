@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\SiteSettings;
+use App\Repository\MediaRepository;
 use App\Repository\SiteSettingsRepository;
 use App\Service\AppearanceNormalizer;
 use App\Service\ContactSettingsSync;
@@ -31,6 +32,7 @@ final class SettingsAdminController extends AbstractController
         private readonly ContactSettingsSync $contactSettingsSync,
         private readonly AppearanceNormalizer $appearanceNormalizer,
         private readonly UploadErrorResolver $uploadErrorResolver,
+        private readonly MediaRepository $mediaRepository,
     ) {
     }
 
@@ -330,6 +332,57 @@ final class SettingsAdminController extends AbstractController
         return $this->handleAssetUpload($request, 'favicon');
     }
 
+    #[Route('/logo', name: 'api_admin_settings_delete_logo', methods: ['DELETE'])]
+    public function deleteLogo(): JsonResponse
+    {
+        return $this->handleAssetDelete('logo');
+    }
+
+    #[Route('/favicon', name: 'api_admin_settings_delete_favicon', methods: ['DELETE'])]
+    public function deleteFavicon(): JsonResponse
+    {
+        return $this->handleAssetDelete('favicon');
+    }
+
+    private function handleAssetDelete(string $kind): JsonResponse
+    {
+        $settings = $this->getOrCreateSettings();
+        if ($kind === 'favicon') {
+            $oldPath = $settings->getFavicon();
+            $settings->setFavicon(null);
+        } else {
+            $oldPath = $settings->getLogo();
+            $settings->setLogo(null);
+        }
+        $settings->setUpdatedAt(new \DateTimeImmutable());
+        $this->entityManager->flush();
+
+        $this->removeAssetFile($oldPath, $settings);
+
+        return $this->json(['path' => null]);
+    }
+
+    /**
+     * Supprime le fichier d'un ancien logo/favicon s'il n'est plus utilise
+     * (ni par l'autre champ, ni par la mediatheque).
+     */
+    private function removeAssetFile(?string $path, SiteSettings $settings): void
+    {
+        if ($path === null || !str_starts_with($path, '/images/')) {
+            return;
+        }
+        if ($path === $settings->getLogo() || $path === $settings->getFavicon()) {
+            return;
+        }
+
+        $filename = basename($path);
+        if ($this->mediaRepository->findOneBy(['filename' => $filename]) !== null) {
+            return;
+        }
+
+        $this->mediaUploader->remove($filename);
+    }
+
     private function handleAssetUpload(Request $request, string $kind): JsonResponse
     {
         $uploaded = $request->files->get('file');
@@ -354,12 +407,16 @@ final class SettingsAdminController extends AbstractController
         $path = '/images/' . $fileData['filename'];
         $settings = $this->getOrCreateSettings();
         if ($kind === 'favicon') {
+            $oldPath = $settings->getFavicon();
             $settings->setFavicon($path);
         } else {
+            $oldPath = $settings->getLogo();
             $settings->setLogo($path);
         }
         $settings->setUpdatedAt(new \DateTimeImmutable());
         $this->entityManager->flush();
+
+        $this->removeAssetFile($oldPath, $settings);
 
         return $this->json(['path' => $path]);
     }
