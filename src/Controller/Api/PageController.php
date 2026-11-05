@@ -63,6 +63,8 @@ final class PageController extends AbstractController
             'title' => $page->getTitle(),
             'metaTitle' => $page->getMetaTitle(),
             'metaDescription' => $page->getMetaDescription(),
+            'html' => $page->getHtml(),
+            'css' => $page->getCss(),
             'sections' => $sections,
         ];
     }

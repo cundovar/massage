@@ -80,6 +80,7 @@ final class PageAdminController extends AbstractController
             'navOrder' => $page->getNavOrder(),
             'navTitle' => $page->getNavTitle(),
             'slugEditable' => $this->isSlugEditable($page),
+            'publishedInBuilder' => $page->isPublishedInBuilder(),
             'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
         ], $pages);
 
@@ -217,6 +218,7 @@ final class PageAdminController extends AbstractController
             'navOrder' => $page->getNavOrder(),
             'navTitle' => $page->getNavTitle(),
             'slugEditable' => $this->isSlugEditable($page),
+            'publishedInBuilder' => $page->isPublishedInBuilder(),
             'sections' => $sections,
             'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
         ]);
@@ -320,6 +322,7 @@ final class PageAdminController extends AbstractController
             'navOrder' => $page->getNavOrder(),
             'navTitle' => $page->getNavTitle(),
             'slugEditable' => $this->isSlugEditable($page),
+            'publishedInBuilder' => $page->isPublishedInBuilder(),
             'sections' => $sections,
             'updatedAt' => $page->getUpdatedAt()->format(DATE_ATOM),
         ]);

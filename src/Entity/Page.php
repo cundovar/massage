@@ -37,6 +37,12 @@ class Page
     #[ORM\Column(type: 'string', length: 100, nullable: true)]
     private ?string $navTitle = null;
 
+    #[ORM\Column(type: 'text', length: 4294967295, nullable: true)]
+    private ?string $html = null;
+
+    #[ORM\Column(type: 'text', length: 4294967295, nullable: true)]
+    private ?string $css = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -167,6 +173,36 @@ class Page
         $this->updatedAt = $updatedAt;
 
         return $this;
+    }
+
+    public function getHtml(): ?string
+    {
+        return $this->html;
+    }
+
+    public function setHtml(?string $html): self
+    {
+        $this->html = $html;
+
+        return $this;
+    }
+
+    public function getCss(): ?string
+    {
+        return $this->css;
+    }
+
+    public function setCss(?string $css): self
+    {
+        $this->css = $css;
+
+        return $this;
+    }
+
+    /** A page is rendered from its GrapesJS export as soon as it has one, even an empty one. */
+    public function isPublishedInBuilder(): bool
+    {
+        return $this->html !== null;
     }
 
     /** @return Collection<int, PageSection> */
