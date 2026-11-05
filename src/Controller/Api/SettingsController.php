@@ -33,6 +33,7 @@ final class SettingsController extends AbstractController
                 ],
                 'contact' => [
                     'address' => ['street' => '', 'postalCode' => '', 'city' => ''],
+                    'locations' => [],
                     'phone' => '',
                     'email' => '',
                     'googleMapsUrl' => null,
@@ -47,10 +48,15 @@ final class SettingsController extends AbstractController
                     'quickLinks' => [],
                     'showSocialLinks' => true,
                     'showContactInfo' => true,
+                    'addressDisplay' => 'all',
+                    'selectedAddressIndex' => 0,
+                    'addressSummary' => 'Deux lieux pour les massages',
                     'showHours' => false,
                     'customDescription' => null,
                     'mentionsLegalesText' => 'Mentions legales',
                     'showMentionsLegales' => true,
+                    'style' => 'light',
+                    'backgroundColor' => '',
                 ],
             ]);
         }
@@ -75,6 +81,14 @@ final class SettingsController extends AbstractController
                     'postalCode' => (string) ($address['postalCode'] ?? ''),
                     'city' => (string) ($address['city'] ?? ''),
                 ],
+                'locations' => is_array($address['locations'] ?? null)
+                    ? $address['locations']
+                    : [[
+                        'label' => 'Lieu principal',
+                        'street' => (string) ($address['street'] ?? ''),
+                        'postalCode' => (string) ($address['postalCode'] ?? ''),
+                        'city' => (string) ($address['city'] ?? ''),
+                    ]],
                 'phone' => $settings->getContactPhone() ?? '',
                 'email' => $settings->getContactEmail(),
                 'googleMapsUrl' => $settings->getGoogleMapsUrl(),
@@ -99,10 +113,15 @@ final class SettingsController extends AbstractController
                 'quickLinks' => is_array($footer['quickLinks'] ?? null) ? $footer['quickLinks'] : [],
                 'showSocialLinks' => (bool) ($footer['showSocialLinks'] ?? true),
                 'showContactInfo' => (bool) ($footer['showContactInfo'] ?? true),
+                'addressDisplay' => (string) ($footer['addressDisplay'] ?? 'all'),
+                'selectedAddressIndex' => (int) ($footer['selectedAddressIndex'] ?? 0),
+                'addressSummary' => (string) ($footer['addressSummary'] ?? 'Deux lieux pour les massages'),
                 'showHours' => (bool) ($footer['showHours'] ?? false),
                 'customDescription' => $footer['customDescription'] ?? null,
                 'mentionsLegalesText' => (string) ($footer['mentionsLegalesText'] ?? 'Mentions legales'),
                 'showMentionsLegales' => (bool) ($footer['showMentionsLegales'] ?? true),
+                'style' => (string) ($footer['style'] ?? 'light'),
+                'backgroundColor' => (string) ($footer['backgroundColor'] ?? ''),
             ],
         ]);
     }

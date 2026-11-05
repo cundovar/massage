@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Entity\SiteSettings;
+use App\Repository\MediaRepository;
 use App\Repository\SiteSettingsRepository;
 use App\Service\AppearanceNormalizer;
 use App\Service\ContactSettingsSync;
@@ -22,6 +23,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class SettingsAdminController extends AbstractController
 {
     private const MAX_FILE_SIZE_BYTES = 2_097_152;
+    private const FOOTER_STYLES = ['light', 'theme', 'dark', 'transparent', 'custom'];
 
     public function __construct(
         private readonly SiteSettingsRepository $siteSettingsRepository,
@@ -30,6 +32,7 @@ final class SettingsAdminController extends AbstractController
         private readonly ContactSettingsSync $contactSettingsSync,
         private readonly AppearanceNormalizer $appearanceNormalizer,
         private readonly UploadErrorResolver $uploadErrorResolver,
+        private readonly MediaRepository $mediaRepository,
     ) {
     }
 
@@ -96,6 +99,31 @@ final class SettingsAdminController extends AbstractController
                 $address['street'] = isset($contact['address']['street']) ? trim((string) $contact['address']['street']) : ($address['street'] ?? '');
                 $address['postalCode'] = isset($contact['address']['postalCode']) ? trim((string) $contact['address']['postalCode']) : ($address['postalCode'] ?? '');
                 $address['city'] = isset($contact['address']['city']) ? trim((string) $contact['address']['city']) : ($address['city'] ?? '');
+                $settings->setAddress($address);
+            }
+
+            if (array_key_exists('locations', $contact) && is_array($contact['locations'])) {
+                $locations = array_values(array_map(static function ($location): array {
+                    if (!is_array($location)) {
+                        return ['label' => '', 'street' => '', 'postalCode' => '', 'city' => ''];
+                    }
+
+                    return [
+                        'label' => trim((string) ($location['label'] ?? '')),
+                        'street' => trim((string) ($location['street'] ?? '')),
+                        'postalCode' => trim((string) ($location['postalCode'] ?? '')),
+                        'city' => trim((string) ($location['city'] ?? '')),
+                    ];
+                }, $contact['locations']));
+                $address = $settings->getAddress() ?? [];
+                $address['locations'] = $locations;
+                if (isset($locations[0])) {
+                    $address = array_merge($address, [
+                        'street' => $locations[0]['street'],
+                        'postalCode' => $locations[0]['postalCode'],
+                        'city' => $locations[0]['city'],
+                    ]);
+                }
                 $settings->setAddress($address);
             }
 
@@ -228,6 +256,16 @@ final class SettingsAdminController extends AbstractController
             if (array_key_exists('showContactInfo', $payload['footer'])) {
                 $footer['showContactInfo'] = (bool) $payload['footer']['showContactInfo'];
             }
+            if (array_key_exists('addressDisplay', $payload['footer'])) {
+                $display = (string) $payload['footer']['addressDisplay'];
+                $footer['addressDisplay'] = in_array($display, ['all', 'selected', 'summary'], true) ? $display : 'all';
+            }
+            if (array_key_exists('selectedAddressIndex', $payload['footer'])) {
+                $footer['selectedAddressIndex'] = max(0, (int) $payload['footer']['selectedAddressIndex']);
+            }
+            if (array_key_exists('addressSummary', $payload['footer'])) {
+                $footer['addressSummary'] = trim((string) $payload['footer']['addressSummary']);
+            }
             if (array_key_exists('showHours', $payload['footer'])) {
                 $footer['showHours'] = (bool) $payload['footer']['showHours'];
             }
@@ -240,6 +278,14 @@ final class SettingsAdminController extends AbstractController
             }
             if (array_key_exists('showMentionsLegales', $payload['footer'])) {
                 $footer['showMentionsLegales'] = (bool) $payload['footer']['showMentionsLegales'];
+            }
+            if (array_key_exists('style', $payload['footer'])) {
+                $style = (string) $payload['footer']['style'];
+                $footer['style'] = in_array($style, self::FOOTER_STYLES, true) ? $style : 'light';
+            }
+            if (array_key_exists('backgroundColor', $payload['footer'])) {
+                $color = trim((string) $payload['footer']['backgroundColor']);
+                $footer['backgroundColor'] = preg_match('/^#[0-9a-fA-F]{6}$/', $color) === 1 ? strtoupper($color) : '';
             }
             $settings->setFooterData($footer);
         }
@@ -286,6 +332,57 @@ final class SettingsAdminController extends AbstractController
         return $this->handleAssetUpload($request, 'favicon');
     }
 
+    #[Route('/logo', name: 'api_admin_settings_delete_logo', methods: ['DELETE'])]
+    public function deleteLogo(): JsonResponse
+    {
+        return $this->handleAssetDelete('logo');
+    }
+
+    #[Route('/favicon', name: 'api_admin_settings_delete_favicon', methods: ['DELETE'])]
+    public function deleteFavicon(): JsonResponse
+    {
+        return $this->handleAssetDelete('favicon');
+    }
+
+    private function handleAssetDelete(string $kind): JsonResponse
+    {
+        $settings = $this->getOrCreateSettings();
+        if ($kind === 'favicon') {
+            $oldPath = $settings->getFavicon();
+            $settings->setFavicon(null);
+        } else {
+            $oldPath = $settings->getLogo();
+            $settings->setLogo(null);
+        }
+        $settings->setUpdatedAt(new \DateTimeImmutable());
+        $this->entityManager->flush();
+
+        $this->removeAssetFile($oldPath, $settings);
+
+        return $this->json(['path' => null]);
+    }
+
+    /**
+     * Supprime le fichier d'un ancien logo/favicon s'il n'est plus utilise
+     * (ni par l'autre champ, ni par la mediatheque).
+     */
+    private function removeAssetFile(?string $path, SiteSettings $settings): void
+    {
+        if ($path === null || !str_starts_with($path, '/images/')) {
+            return;
+        }
+        if ($path === $settings->getLogo() || $path === $settings->getFavicon()) {
+            return;
+        }
+
+        $filename = basename($path);
+        if ($this->mediaRepository->findOneBy(['filename' => $filename]) !== null) {
+            return;
+        }
+
+        $this->mediaUploader->remove($filename);
+    }
+
     private function handleAssetUpload(Request $request, string $kind): JsonResponse
     {
         $uploaded = $request->files->get('file');
@@ -310,12 +407,16 @@ final class SettingsAdminController extends AbstractController
         $path = '/images/' . $fileData['filename'];
         $settings = $this->getOrCreateSettings();
         if ($kind === 'favicon') {
+            $oldPath = $settings->getFavicon();
             $settings->setFavicon($path);
         } else {
+            $oldPath = $settings->getLogo();
             $settings->setLogo($path);
         }
         $settings->setUpdatedAt(new \DateTimeImmutable());
         $this->entityManager->flush();
+
+        $this->removeAssetFile($oldPath, $settings);
 
         return $this->json(['path' => $path]);
     }
@@ -338,6 +439,12 @@ final class SettingsAdminController extends AbstractController
                 'street' => '123 Rue du Bien-Etre',
                 'postalCode' => '75011',
                 'city' => 'Paris',
+                'locations' => [[
+                    'label' => 'Lieu principal',
+                    'street' => '123 Rue du Bien-Etre',
+                    'postalCode' => '75011',
+                    'city' => 'Paris',
+                ]],
             ])
             ->setSocialLinks([
                 'instagram' => null,
@@ -369,10 +476,15 @@ final class SettingsAdminController extends AbstractController
                 'quickLinks' => [],
                 'showSocialLinks' => true,
                 'showContactInfo' => true,
+                'addressDisplay' => 'all',
+                'selectedAddressIndex' => 0,
+                'addressSummary' => 'Deux lieux pour les massages',
                 'showHours' => false,
                 'customDescription' => null,
                 'mentionsLegalesText' => 'Mentions legales',
                 'showMentionsLegales' => true,
+                'style' => 'light',
+                'backgroundColor' => '',
             ])
             ->setNavigationData([
                 'externalLinks' => [],
@@ -408,6 +520,14 @@ final class SettingsAdminController extends AbstractController
                     'postalCode' => (string) ($address['postalCode'] ?? ''),
                     'city' => (string) ($address['city'] ?? ''),
                 ],
+                'locations' => is_array($address['locations'] ?? null)
+                    ? $address['locations']
+                    : [[
+                        'label' => 'Lieu principal',
+                        'street' => (string) ($address['street'] ?? ''),
+                        'postalCode' => (string) ($address['postalCode'] ?? ''),
+                        'city' => (string) ($address['city'] ?? ''),
+                    ]],
                 'phone' => $settings->getContactPhone() ?? '',
                 'email' => $settings->getContactEmail(),
                 'googleMapsUrl' => $settings->getGoogleMapsUrl(),
@@ -433,10 +553,15 @@ final class SettingsAdminController extends AbstractController
                 'quickLinks' => is_array($footer['quickLinks'] ?? null) ? $footer['quickLinks'] : [],
                 'showSocialLinks' => (bool) ($footer['showSocialLinks'] ?? true),
                 'showContactInfo' => (bool) ($footer['showContactInfo'] ?? true),
+                'addressDisplay' => (string) ($footer['addressDisplay'] ?? 'all'),
+                'selectedAddressIndex' => (int) ($footer['selectedAddressIndex'] ?? 0),
+                'addressSummary' => (string) ($footer['addressSummary'] ?? 'Deux lieux pour les massages'),
                 'showHours' => (bool) ($footer['showHours'] ?? false),
                 'customDescription' => $footer['customDescription'] ?? null,
                 'mentionsLegalesText' => (string) ($footer['mentionsLegalesText'] ?? 'Mentions legales'),
                 'showMentionsLegales' => (bool) ($footer['showMentionsLegales'] ?? true),
+                'style' => (string) ($footer['style'] ?? 'light'),
+                'backgroundColor' => (string) ($footer['backgroundColor'] ?? ''),
             ],
             'navigation' => [
                 'externalLinks' => is_array($navigation['externalLinks'] ?? null) ? $navigation['externalLinks'] : [],

@@ -72,6 +72,12 @@ final class ContactSettingsSync
 
         $address = $settings->getAddress() ?? [];
         $hoursData = $settings->getHoursData() ?? [];
+        $locations = is_array($address['locations'] ?? null) ? $address['locations'] : [[
+            'label' => 'Lieu principal',
+            'street' => (string) ($address['street'] ?? ''),
+            'postalCode' => (string) ($address['postalCode'] ?? ''),
+            'city' => (string) ($address['city'] ?? ''),
+        ]];
 
         foreach ($contactSections as $contactSection) {
             $content = $contactSection->getContent() ?? [];
@@ -79,6 +85,11 @@ final class ContactSettingsSync
                 'street' => (string) ($address['street'] ?? ''),
                 'city' => trim(($address['postalCode'] ?? '') . ' ' . ($address['city'] ?? '')),
             ];
+            $content['addresses'] = array_values(array_map(static fn ($location): array => [
+                'label' => (string) ($location['label'] ?? ''),
+                'street' => (string) ($location['street'] ?? ''),
+                'city' => trim(($location['postalCode'] ?? '') . ' ' . ($location['city'] ?? '')),
+            ], $locations));
             $content['phone'] = $settings->getContactPhone() ?? '';
             $content['email'] = $settings->getContactEmail();
             $content['hours'] = $hoursData['schedule'] ?? [];
@@ -121,6 +132,30 @@ final class ContactSettingsSync
                 }
             }
 
+            $settings->setAddress($address);
+        }
+
+        if (isset($content['addresses']) && is_array($content['addresses'])) {
+            $address = $settings->getAddress() ?? [];
+            $locations = array_values(array_map(static function ($location): array {
+                $cityValue = trim((string) ($location['city'] ?? ''));
+                $cityParts = explode(' ', $cityValue, 2);
+
+                return [
+                    'label' => trim((string) ($location['label'] ?? '')),
+                    'street' => trim((string) ($location['street'] ?? '')),
+                    'postalCode' => count($cityParts) === 2 && preg_match('/^\d{5}$/', $cityParts[0]) ? $cityParts[0] : '',
+                    'city' => count($cityParts) === 2 && preg_match('/^\d{5}$/', $cityParts[0]) ? $cityParts[1] : $cityValue,
+                ];
+            }, $content['addresses']));
+            $address['locations'] = $locations;
+            if (isset($locations[0])) {
+                $address = array_merge($address, [
+                    'street' => $locations[0]['street'],
+                    'postalCode' => $locations[0]['postalCode'],
+                    'city' => $locations[0]['city'],
+                ]);
+            }
             $settings->setAddress($address);
         }
 
